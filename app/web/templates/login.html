@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Вход — Roller IP{% endblock %}
+{% block content %}
+<div class="panel panel-center accent" style="max-width: 380px; margin-top: 64px;">
+  <div class="mark" style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:18px;margin:0 auto 18px;">S</div>
+  <h2>Roller IP</h2>
+  <p class="muted" style="margin:0 0 22px; font-size:13px;">Панель управления роллером floating IP</p>
+  <form method="post" action="/login">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="field">
+      <label for="username">Логин</label>
+      <input type="text" id="username" name="username" autocomplete="username" required>
+    </div>
+    <div class="field">
+      <label for="password">Пароль</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required>
+    </div>
+    <button type="submit" class="btn-block">Войти</button>
+  </form>
+</div>
+{% endblock %}

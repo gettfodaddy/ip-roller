@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Ресурсы — Roller IP{% endblock %}
+{% block content %}
+<div class="page-head-row">
+  <div><h1>Управляемые ресурсы</h1><p class="muted">Только ID, зарегистрированные ip-roller. Незнакомые ресурсы Selectel здесь не удаляются.</p></div>
+</div>
+{% if uncertain %}
+<div class="panel accent">
+  <h2>Операции с неизвестным результатом</h2>
+  <p class="muted">Например, запрос создания мог завершиться на стороне Selectel, а ответ потеряться. Сначала проверьте проект в панели Selectel. Нажимайте кнопку только если Floating IP от операции отсутствует (либо вы уже вручную разобрали найденный ресурс). Подтверждение снимает блокировку повторов и ничего не удаляет.</p>
+  <div class="table-wrap"><table><thead><tr><th>ID</th><th>Аккаунт</th><th>Время</th><th>Действие</th></tr></thead><tbody>
+  {% for op in uncertain %}<tr><td class="mono">{{ op.id }}</td><td>{{ op.label }}</td><td data-ts="{{ op.created_at }}">{{ op.created_at }}</td><td>
+    <form method="post" action="/managed-resources/uncertain/{{ op.id }}/resolve" onsubmit="return confirm('Подтвердите: вы проверили проект Selectel и установили, что с этой операцией делать дальше?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn-secondary btn-sm" name="verified" value="confirmed-no-resource" type="submit">Подтвердить: ресурс отсутствует</button>
+    </form>
+  </td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+{% endif %}
+<div class="panel panel-tight accent">
+  <div class="table-wrap"><table>
+    <thead><tr><th class="text-left">IP</th><th>Аккаунт</th><th>Проект</th><th>Зона</th><th>Состояние</th><th>Создан</th><th>Действие</th></tr></thead>
+    <tbody>
+    {% for item in items %}
+      <tr>
+        <td class="text-left mono">{{ item.ip }}<div class="faint">{{ item.neutron_id }}</div></td>
+        <td>{{ item.account_label }}</td><td class="mono">{{ item.project_id or '—' }}</td><td class="mono">{{ item.zone }}</td>
+        <td><span class="badge badge-{{ 'match' if item.state == 'protected' else ('error' if item.state == 'delete_error' else 'stopped') }}">{{ item.state }}</span></td>
+        <td data-ts="{{ item.created_at }}">{{ item.created_at }}</td>
+        <td>{% if item.state != 'deleted' %}
+          <form method="post" action="/managed-resources/{{ item.neutron_id }}/release" onsubmit="return confirm('Освободить только этот зарегистрированный IP {{ item.ip }} в Selectel?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn-danger btn-sm" type="submit">Освободить</button>
+          </form>{% else %}<span class="faint">—</span>{% endif %}</td>
+      </tr>
+    {% else %}<tr><td colspan="7"><div class="empty-state"><div class="glyph">◇</div><strong>Ресурсов пока нет</strong><div>Созданные приложением IP появятся здесь после регистрации в Selectel.</div></div></td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</div>
+<div class="callout callout-warn"><span class="icon">!</span><div>Освобождение останавливает worker аккаунта и удаляет выбранный ресурс по его точному ID. IP, привязанные к серверу, сначала нужно отвязать в Selectel.</div></div>
+{% endblock %}

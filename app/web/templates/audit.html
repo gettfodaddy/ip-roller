@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Аудит — Roller IP{% endblock %}
+{% block content %}
+<div class="page-head-row"><div><h1>Журнал действий</h1><p class="muted">Изменения аккаунтов, запуск и остановка workers, ручные действия с ресурсами. Секреты сюда не записываются.</p></div></div>
+<div class="panel panel-tight accent"><div class="table-wrap"><table>
+  <thead><tr><th>Время</th><th>Пользователь</th><th>Действие</th><th>Цель</th><th class="text-left">Детали</th></tr></thead>
+  <tbody>{% for event in events %}<tr>
+    <td data-ts="{{ event.created_at }}">{{ event.created_at }}</td><td>{{ event.actor }}</td>
+    <td><span class="badge badge-zone">{{ event.action }}</span></td><td>{{ event.target }}</td><td class="text-left muted">{{ event.details }}</td>
+  </tr>{% else %}<tr><td colspan="5"><div class="empty-state">Записей пока нет</div></td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% endblock %}

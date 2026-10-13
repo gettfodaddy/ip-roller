@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Аналитика — Roller IP{% endblock %}
+{% block content %}
+<div id="live-region" data-poll-interval="15000">
+<div class="page-head-row">
+  <div><div class="kicker">Наблюдаемость</div><h1>Аналитика</h1><div class="muted">Статистика из журнала операций и реестра IP. Расходы показываются только при наличии достоверных данных провайдера.</div></div>
+  <form method="get" action="/analytics" class="filter-row">
+    <label for="hours-filter" style="margin:0;">Период</label>
+    <select id="hours-filter" name="hours" onchange="this.form.submit()">
+      <option value="24" {{ 'selected' if hours == 24 else '' }}>24 часа</option>
+      <option value="168" {{ 'selected' if hours == 168 else '' }}>7 дней</option>
+      <option value="720" {{ 'selected' if hours == 720 else '' }}>30 дней</option>
+    </select>
+  </form>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card"><div class="num">{{ analytics.attempts }}</div><div class="label">Проверок адресов</div></div>
+  <div class="stat-card"><div class="num ok">{{ analytics.totals.get('match', 0) }}</div><div class="label">Найдено совпадений</div></div>
+  <div class="stat-card"><div class="num">{{ analytics.totals.get('miss', 0) }}</div><div class="label">Не совпало с CIDR</div></div>
+  <div class="stat-card"><div class="num {{ 'err' if analytics.errors else '' }}">{{ analytics.errors }}</div><div class="label">Ошибки API/сети</div></div>
+  <div class="stat-card"><div class="num">{{ analytics.match_rate }}%</div><div class="label">Доля совпадений</div></div>
+  <div class="stat-card"><div class="num">{{ analytics.effectiveness_per_100 }}</div><div class="label">Новых уникальных совпадений на 100 проверок</div></div>
+  <div class="stat-card"><div class="num">{{ analytics.repeat_ips }}</div><div class="label">IP с повторными появлениями</div></div>
+</div>
+
+<div class="panel">
+  <div class="section-title"><h2>Оценка стоимости удержания</h2><span class="data-chip">Не является данными биллинга</span></div>
+  {% if analytics.cost_per_ip_hour_rub > 0 %}
+  <div class="stat-grid" style="margin-bottom:8px;">
+    <div class="stat-card"><div class="num">{{ analytics.resource_hours }}</div><div class="label">IP-часов с начала учёта</div></div>
+    <div class="stat-card"><div class="num">{{ '%.2f'|format(analytics.estimated_cost_rub) }} ₽</div><div class="label">Расчётная стоимость</div></div>
+    <div class="stat-card"><div class="num">{{ '%.2f'|format(analytics.estimated_cost_last_hour_rub) }} ₽</div><div class="label">Расчётно за последний час</div></div>
+    <div class="stat-card"><div class="num">{{ '%.2f'|format(analytics.estimated_cost_last_24h_rub) }} ₽</div><div class="label">Расчётно за последние 24 часа</div></div>
+    <div class="stat-card"><div class="num">{{ ('%.2f ₽'|format(analytics.estimated_cost_per_match_rub)) if analytics.estimated_cost_per_match_rub is not none else '—' }}</div><div class="label">На защищённый IP</div></div>
+    <div class="stat-card"><div class="num">{{ '%.4f'|format(analytics.cost_per_ip_hour_rub) }} ₽</div><div class="label">Настроенная ставка за IP-час</div></div>
+  </div>
+  <div class="metric-note">Оценка считается по длительности удержания ресурсов, зарегистрированных сервисом, и ставке из <code>FLOATING_IP_COST_PER_HOUR_RUB</code>. Стоп-лимиты новых выделений задаются через <code>MAX_ESTIMATED_HOURLY_COST_RUB</code> и <code>MAX_ESTIMATED_DAILY_COST_RUB</code>. Сверьте ставку с детализацией Selectel: округление тарифа, НДС и бесплатные квоты могут отличаться.</div>
+  {% else %}
+  <div class="callout callout-info" style="margin:0;"><span class="icon">i</span><div>Денежная оценка выключена, потому что в проекте нет подтверждённой ставки тарифа. Укажите фактическую цену IP-часа из детализации Selectel в <code>FLOATING_IP_COST_PER_HOUR_RUB</code>, чтобы увидеть оценку. Для денежного предохранителя дополнительно задайте <code>MAX_ESTIMATED_HOURLY_COST_RUB</code> и/или <code>MAX_ESTIMATED_DAILY_COST_RUB</code>. Сумма не выдаётся за фактический биллинг.</div></div>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <div class="section-title"><h2>Динамика по {{ 'дням' if hours > 72 else 'часам' }}</h2><span class="metric-note">Проверки адресов и ошибки</span></div>
+  {% if analytics.hourly %}
+  <div class="chart-bars">
+    {% for point in analytics.hourly %}
+    <div class="chart-row">
+      <span class="mono" data-ts="{{ point.hour }}">{{ point.hour }}</span>
+      <div class="chart-track" title="{{ point.total }} событий"><div class="chart-fill" style="width:{{ point.bar }}%"></div></div>
+      <strong class="mono">{{ point.total }}</strong>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}<div class="empty-state">За выбранный период записей нет.</div>{% endif %}
+</div>
+
+<div class="panel panel-tight accent">
+  <div style="padding:20px 22px 8px;"><div class="section-title"><h2>Результат по регионам</h2><span class="metric-note">Учитываются данные в выбранном периоде</span></div></div>
+  <div class="table-wrap"><table><thead><tr><th>Регион</th><th>Совпадения</th><th>Не совпало</th><th>Ошибки</th><th>Доля совпадений</th></tr></thead><tbody>
+    {% set regions = analytics.rows | map(attribute='region') | unique | list %}
+    {% for region in regions %}
+      {% set ns = namespace(match=0, miss=0, errors=0) %}
+      {% for item in analytics.rows if item.region == region %}
+        {% if item.outcome == 'match' %}{% set ns.match = ns.match + item.total %}
+        {% elif item.outcome == 'miss' %}{% set ns.miss = ns.miss + item.total %}
+        {% else %}{% set ns.errors = ns.errors + item.total %}{% endif %}
+      {% endfor %}
+      {% set checked = ns.match + ns.miss %}
+      <tr><td><span class="badge badge-zone">{{ region }}</span></td><td class="mono">{{ ns.match }}</td><td class="mono">{{ ns.miss }}</td><td class="mono">{{ ns.errors }}</td><td class="mono">{{ ((100 * ns.match / checked) | round(2)) if checked else 0 }}%</td></tr>
+    {% else %}<tr><td colspan="5"><div class="empty-state">Нет данных по регионам за период.</div></td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+
+<div class="panel">
+  <div class="section-title"><h2>Реестр IP</h2><a href="/ip-history">Открыть полную историю →</a></div>
+  <div class="row" style="justify-content:flex-start;flex-wrap:wrap;">
+    <span class="data-chip">Совпадения: {{ analytics.registry.get('match', 0) }}</span>
+    <span class="data-chip">Отрицательные результаты: {{ analytics.registry.get('miss', 0) }}</span>
+    <span class="data-chip">Ошибки проверки: {{ analytics.registry.get('error', 0) }}</span>
+  </div>
+</div>
+</div>
+{% endblock %}

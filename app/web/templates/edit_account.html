@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Редактировать — {{ account.label }} — Roller IP{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Редактировать аккаунт</h1>
+  <p>Поправь опечатку в логине, ID или пароле сервисного пользователя — без удаления и повторного добавления аккаунта.</p>
+</div>
+
+{% if is_running %}
+<div class="callout callout-info" style="max-width:560px; margin-inline:auto;">
+  <span class="icon">💡</span>
+  <div>Аккаунт сейчас <b>работает</b> — при сохранении воркер автоматически перезапустится, чтобы подхватить новые данные (он держит старый снимок в памяти и сам их не увидит). Вручную жать «Старт» не нужно.</div>
+</div>
+{% endif %}
+
+<div class="panel accent" style="max-width: 560px; margin-inline:auto;">
+  <form method="post" action="/accounts/{{ account.id }}/edit">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="field">
+      <label for="label">Название (для себя, в логах и уведомлениях)</label>
+      <input type="text" id="label" name="label" value="{{ account.label }}" required>
+    </div>
+
+    <div class="field">
+      <label for="account_id">Account ID</label>
+      <input type="text" id="account_id" name="account_id" value="{{ account.account_id }}" required>
+      <div class="hint">Правый верхний угол панели <span class="mono">my.selectel.ru</span>, под адресом почты.</div>
+    </div>
+
+    <div class="field">
+      <label for="username">Username сервисного пользователя</label>
+      <input type="text" id="username" name="username" value="{{ account.username }}" required>
+    </div>
+
+    <div class="field">
+      <label for="password">Password сервисного пользователя</label>
+      <input type="password" id="password" name="password" placeholder="оставь пустым, чтобы не менять" autocomplete="new-password">
+      <div class="hint">Пусто — пароль останется прежним. Заполни, только если хочешь его заменить.</div>
+    </div>
+
+    <div class="field">
+      <label for="project_id">Project ID</label>
+      <input type="text" id="project_id" name="project_id" value="{{ account.project_id or '' }}" required>
+      <div class="hint">Облако → Проекты → нужный проект → ID из адреса страницы.</div>
+    </div>
+
+    <div class="btn-row">
+      <button type="submit">Сохранить</button>
+      <a href="/" class="btn btn-secondary">Отмена</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Логи — {{ account.label }} — Roller IP{% endblock %}
+{% block content %}
+<div class="page-head-row">
+  <h1>Логи — {{ account.label }}</h1>
+  <a href="/" class="btn btn-secondary btn-sm">← Назад</a>
+</div>
+
+<div id="live-region" data-poll-interval="2000">
+{% set matches = attempts | selectattr('result', 'equalto', 'match') | list %}
+{% set misses = attempts | selectattr('result', 'equalto', 'miss') | list %}
+{% set errors = attempts | selectattr('result', 'equalto', 'error') | list %}
+
+<div class="center" style="margin-bottom:18px;">
+  <span class="badge badge-{{ account.status }}">{{ account.status }}</span>
+  {% if account.status_detail %}
+  <span class="faint" style="margin-left:8px; font-size:12.5px;"
+        {% if account.status == 'cooldown' and account.cooldown_until %}data-cooldown-until="{{ account.cooldown_until }}"{% endif %}>{{ account.status_detail }}</span>
+  {% endif %}
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="num">{{ attempts | length }}</div>
+    <div class="label">Показано попыток</div>
+  </div>
+  <div class="stat-card">
+    <div class="num ok">{{ matches | length }}</div>
+    <div class="label">Совпадений с БС</div>
+  </div>
+  <div class="stat-card">
+    <div class="num">{{ misses | length }}</div>
+    <div class="label">Мимо (удалено)</div>
+  </div>
+  <div class="stat-card">
+    <div class="num {{ 'err' if errors else '' }}">{{ errors | length }}</div>
+    <div class="label">Ошибок</div>
+  </div>
+</div>
+
+<div class="panel accent">
+  <h3 class="center" style="margin-bottom:14px;">Журнал попыток <span class="faint" style="font-weight:500;">(последние {{ attempts | length }}, самые новые сверху)</span></h3>
+  <div class="console">
+    {% for e in attempts %}
+    {% set city = zone_catalog.city_of(e.zone) if zone_catalog else None %}
+    <div class="console-line {{ 'is-match' if e.result == 'match' else ('is-error' if e.result == 'error' else '') }}">
+<span class="console-ts" data-ts="{{ e.created_at }}">{{ e.created_at }}</span> <span class="lvl lvl-{{ e.result | upper }}">[{{ e.result | upper }}]</span> <span class="console-zone">{{ e.zone }}</span>{% if city %} <span class="faint">({{ city_labels.get(city, city) }})</span>{% endif %} <span class="console-ip">{{ e.ip or '—' }}</span>{% if e.http_status %} <span class="{{ 'lvl-ERROR' if e.http_status >= 400 else 'faint' }}">HTTP {{ e.http_status }}</span>{% endif %}{% if e.detail %} <span class="muted">— {{ e.detail }}</span>{% endif %}
+    </div>
+    {% else %}
+    <div class="empty-state">Пока пусто — запусти скан на дашборде.</div>
+    {% endfor %}
+  </div>
+</div>
+</div>
+{% endblock %}

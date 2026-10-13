@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Дашборд — Roller IP{% endblock %}
+{% block content %}
+<div class="page-head-row">
+  <div><div class="kicker">Панель управления</div><h1>Аккаунты</h1><div class="muted">Состояние воркеров, лимитов и результатов проверки.</div></div>
+  <div class="btn-row">
+    <form method="post" action="/emergency-stop" onsubmit="return confirm('Остановить все воркеры? Floating IP останутся без изменений.');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn-danger btn-sm" type="submit">Аварийная остановка</button></form>
+    <a href="/accounts/new" class="btn">+ Добавить аккаунт</a>
+  </div>
+</div>
+
+{% if safety %}
+<div class="panel panel-tight" style="display:flex; flex-wrap:wrap; gap:16px 28px; align-items:center; justify-content:space-between;">
+  <div><span class="muted">Операций сегодня</span><strong class="mono" style="margin-left:8px">{{ safety.today_creates }} / {{ daily_create_limit }}</strong></div>
+  <div><span class="muted">Управляемых IP</span><strong class="mono" style="margin-left:8px">{{ safety.managed }} / {{ active_ip_limit }}</strong></div>
+  <div><span class="muted">Ошибок удаления</span><strong class="mono {{ 'err' if safety.delete_errors else '' }}" style="margin-left:8px">{{ safety.delete_errors }}</strong></div>
+  {% if safety.uncertain %}<div class="badge badge-error">Нужна ручная сверка: {{ safety.uncertain }} неопределённых операций</div>{% endif %}
+</div>
+{% endif %}
+{% if circuit and circuit.open_until %}
+<div class="callout callout-warn" data-cooldown-until="{{ circuit.open_until }}"><span class="icon">⏸</span><div><strong>Общая пауза API Selectel.</strong> {{ circuit.reason }}. Все воркеры ждут истечения cooldown.</div></div>
+{% endif %}
+
+<div id="live-region" data-poll-interval="3000">
+{% if accounts %}
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="num">{{ accounts | length }}</div>
+    <div class="label">Аккаунтов</div>
+  </div>
+  <div class="stat-card">
+    <div class="num ok">{{ accounts | selectattr('is_running') | list | length }}</div>
+    <div class="label">Работают</div>
+  </div>
+  <div class="stat-card">
+    <div class="num">{{ accounts | sum(attribute='total_attempts') }}</div>
+    <div class="label">Всего попыток</div>
+  </div>
+  <div class="stat-card">
+    <div class="num ok">{{ accounts | sum(attribute='total_matches') }}</div>
+    <div class="label">Найдено в БС</div>
+  </div>
+</div>
+{% endif %}
+
+{% if analytics %}
+<div class="panel">
+  <div class="section-title">
+    <div><h2>Результаты за 24 часа</h2><div class="metric-note">Фактические записи проверок и ошибок из базы проекта</div></div>
+    <a class="btn btn-secondary btn-sm" href="/analytics">Открыть аналитику →</a>
+  </div>
+  <div class="stat-grid" style="margin-bottom:0;">
+    <div class="stat-card"><div class="num">{{ analytics.attempts }}</div><div class="label">IP проверено</div></div>
+    <div class="stat-card"><div class="num ok">{{ analytics.totals.get('match', 0) }}</div><div class="label">Совпадений</div></div>
+    <div class="stat-card"><div class="num">{{ analytics.totals.get('miss', 0) }}</div><div class="label">Не совпало с CIDR</div></div>
+    <div class="stat-card"><div class="num {{ 'err' if analytics.errors else '' }}">{{ analytics.errors }}</div><div class="label">Ошибок API/сети</div></div>
+  </div>
+</div>
+{% endif %}
+
+<div class="panel panel-tight accent">
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th class="text-left">Аккаунт</th>
+        <th>Зоны</th>
+        <th>Статус</th>
+        <th>Попыток</th>
+        <th>Найдено</th>
+        <th>Действия</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in accounts %}
+      <tr>
+        <td class="text-left"><strong>{{ a.label }}</strong></td>
+        <td class="muted">
+          {% if a.selected_zones %}
+            <span class="mono" style="font-size:12.5px;">{{ a.selected_zones | join(', ') }}</span>
+            {% if a.selected_zones | length == 1 %}
+            <div class="faint" style="font-size:11px; color:var(--warn, #d99a2b); margin-top:3px;" title="Если эта зона уйдёт в сетевой карантин, аккаунт будет простаивать целиком — рекомендуется выбрать 2-3 зоны, чтобы при карантине одной роллер сам переключался на другую.">
+              ⚠ только 1 зона
+            </div>
+            {% endif %}
+          {% else %}
+            <a href="/accounts/{{ a.id }}/zones" data-drawer data-drawer-title="Зоны — {{ a.label }}">выбрать зоны →</a>
+          {% endif %}
+        </td>
+        <td>
+          <span class="badge badge-{{ a.status }}">{{ a.status }}</span>
+          {% if a.status_detail %}
+          <div class="faint" style="font-size:11.5px; margin-top:5px; max-width:220px; margin-inline:auto;"
+               {% if a.status == 'cooldown' and a.cooldown_until %}data-cooldown-until="{{ a.cooldown_until }}"{% endif %}>{{ a.status_detail }}</div>
+          {% endif %}
+        </td>
+        <td class="mono">{{ a.total_attempts }}</td>
+        <td class="mono {{ 'ok' if a.total_matches else '' }}" style="{{ 'color:var(--ok); font-weight:700;' if a.total_matches else '' }}">{{ a.total_matches }}</td>
+        <td class="actions">
+          <div class="btn-row">
+            {% if a.is_running %}
+              <form method="post" action="/accounts/{{ a.id }}/stop"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn-secondary btn-sm" type="submit">⏸ Стоп</button></form>
+            {% else %}
+              <form method="post" action="/accounts/{{ a.id }}/start"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn-sm" type="submit">▶ Старт</button></form>
+            {% endif %}
+            <a href="/accounts/{{ a.id }}/zones" class="btn btn-secondary btn-sm" data-drawer data-drawer-title="Зоны — {{ a.label }}">Зоны</a>
+            <a href="/accounts/{{ a.id }}/logs" class="btn btn-secondary btn-sm" data-drawer data-drawer-title="Логи — {{ a.label }}" data-drawer-live="true">Логи</a>
+            <a href="/accounts/{{ a.id }}/edit" class="btn btn-secondary btn-sm" data-drawer data-drawer-title="Редактировать — {{ a.label }}">Редактировать</a>
+            <form method="post" action="/accounts/{{ a.id }}/delete" onsubmit="return confirm('Удалить аккаунт {{ a.label }}? Это остановит воркер и удалит историю.');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button class="btn-danger btn-sm" type="submit">Удалить</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">
+        <div class="empty-state">
+          <div class="glyph">☁</div>
+          <div style="font-weight:600; color:var(--text); margin-bottom:4px;">Аккаунтов пока нет</div>
+          <div>Добавь первый Selectel-аккаунт, чтобы начать роллинг IP.</div>
+        </div>
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+</div>
+
+{% if not accounts %}
+<div class="callout callout-info" style="max-width:560px; margin-inline:auto;">
+  <span class="icon">💡</span>
+  <div>Не знаешь, что вводить при добавлении аккаунта или как создать сервисного пользователя в Selectel? Загляни во вкладку <a href="/help">«Инструкция»</a> — там пошагово.</div>
+</div>
+{% endif %}
+{% endblock %}

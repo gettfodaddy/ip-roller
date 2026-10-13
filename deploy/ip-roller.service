@@ -1,0 +1,24 @@
+[Unit]
+Description=IP Roller web service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=iproller
+Group=iproller
+WorkingDirectory=/opt/ip-roller
+EnvironmentFile=/opt/ip-roller/.env
+ExecStart=/opt/ip-roller/.venv/bin/uvicorn app.web.main:app --host 127.0.0.1 --port 8000 --workers 1
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=45
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/ip-roller/data
+
+[Install]
+WantedBy=multi-user.target

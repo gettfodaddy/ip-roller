@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}Инструкция — Roller IP{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Инструкция</h1>
+  <p>Как добавить аккаунт Selectel, настроить зоны, Telegram-уведомления и что означают статусы в панели.</p>
+</div>
+
+<div class="toc">
+  <button type="button" class="toc-btn" data-tab-target="account">Сервисный пользователь и проект</button>
+  <button type="button" class="toc-btn" data-tab-target="zones">Зоны и cooldown</button>
+  <button type="button" class="toc-btn" data-tab-target="telegram">Telegram-уведомления</button>
+  <button type="button" class="toc-btn" data-tab-target="statuses">Статусы аккаунта</button>
+  <button type="button" class="toc-btn" data-tab-target="whitelist">Белый список CIDR</button>
+  <button type="button" class="toc-btn" data-tab-target="troubleshooting">Частые ошибки</button>
+</div>
+
+<div class="panel accent tab-panel" id="account">
+  <div class="kicker" style="text-align:center;">Шаг за шагом</div>
+  <h2>Как подготовить аккаунт Selectel</h2>
+  <p class="muted center" style="margin-bottom:24px;">Панель работает не через твой основной логин, а через отдельного сервисного пользователя с ограниченной ролью — это безопаснее.</p>
+
+  <ol class="steps">
+    <li>
+      <h4>Найди Account ID</h4>
+      <p>Зайди в <span class="mono">my.selectel.ru</span> — в правом верхнем углу, под адресом почты, цифровой номер аккаунта. Это и есть <b>Account ID</b>.</p>
+    </li>
+    <li>
+      <h4>Создай отдельный проект под Roller IP</h4>
+      <p>В боковом меню: <b>Облако → Проекты → Добавить проект</b>. Дай понятное имя, например «roller-ip». После создания открой проект — <b>Project ID</b> будет виден в адресе страницы (UUID вида <span class="mono-box">00000000-0000-0000-0000-000000000000</span>).</p>
+    </li>
+    <li>
+      <h4>Создай сервисного пользователя</h4>
+      <p>В разделе <b>Идентификация и доступ → Пользователи</b> добавь нового пользователя — не привязывай его к личной почте, придумай отдельный логин (например <span class="mono">ip-roller-bot</span>) и сложный пароль. Это username/password, которые пойдут в форму «Добавить аккаунт».</p>
+    </li>
+    <li>
+      <h4>Выдай роль <span class="mono">vpc.external_access.admin</span> — именно на уровне проекта</h4>
+      <p>В том же разделе управления доступом выбери созданного пользователя → добавить роль → область действия: <b>твой проект из шага 2</b> → категория ролей <b>vpc</b> → роль <span class="mono-box">vpc.external_access.admin</span>.</p>
+      <div class="callout callout-warn" style="margin-top:10px;">
+        <span class="icon">⚠</span>
+        <div>
+          Именно <b>admin</b>, а не <b>vpc.external_access.user</b> — роль <span class="mono">user</span> даёт только просмотр и изменение уже существующих плавающих IP, но <b>явно запрещает их создание и удаление</b> (docs.selectel.ru), а панели нужны обе операции на каждом цикле. И не выдавай роль администратора аккаунта целиком — она открывает управление всем аккаунтом (биллинг, другие проекты), для панели достаточно одной роли <span class="mono">vpc.external_access.admin</span> на одном проекте.
+        </div>
+      </div>
+    </li>
+    <li>
+      <h4>Добавь аккаунт в панели</h4>
+      <p>Кнопка <b>«+ Добавить аккаунт»</b> на дашборде → впиши название для себя, Account ID, username/password сервисного пользователя и Project ID.</p>
+    </li>
+    <li>
+      <h4>Выбери зоны и запусти</h4>
+      <p>На дашборде у нового аккаунта нажми <b>«выбрать зоны»</b>, отметь нужные (Москва и/или Санкт-Петербург), сохрани — и жми <b>«Старт»</b>.</p>
+    </li>
+  </ol>
+
+  <div class="callout callout-danger">
+    <span class="icon">🔒</span>
+    <div>Пароль Selectel шифруется в SQLite ключом <span class="mono">CREDENTIALS_ENCRYPTION_KEY</span>. Храни ключ отдельно от резервной копии базы и не теряй его: без ключа сервис не сможет войти в Selectel. Закрой права на <span class="mono">.env</span> и каталог <span class="mono">data/</span>; подробности — в файле <span class="mono">DEPLOY.md</span> в составе проекта.</div>
+  </div>
+</div>
+
+<div class="panel accent tab-panel" id="zones">
+  <h2>Зоны и cooldown</h2>
+  <p class="muted center" style="margin-bottom:20px;">Как устроено распределение по зонам и сервисные предохранители.</p>
+
+  <div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px,1fr));">
+    <div class="stat-card">
+      <div class="num" style="font-size:15px;">ru-2 · ru-6 · ru-7</div>
+      <div class="label">Москва</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" style="font-size:15px;">ru-1 · ru-3 · ru-9</div>
+      <div class="label">Санкт-Петербург</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" style="font-size:15px; color:var(--text-faint);">gis-1 · gis-2</div>
+      <div class="label">Выключены (аттестован. сегмент)</div>
+    </div>
+  </div>
+
+  <div class="callout callout-info">
+    <span class="icon">ℹ</span>
+    <div>Сервисный лимит запросов применяется ко всем workers вместе. Переключение зоны не обходит ограничение. Выбирайте зоны только для ресурсов, которыми вы вправе управлять.</div>
+  </div>
+  <div class="callout callout-tip">
+    <span class="icon">✓</span>
+    <div>Скорость ограничивается общим лимитом для всех аккаунтов, а не отдельно на каждый. После 429 приложение учитывает Retry-After, если он передан, и уходит на паузу. Значения в конфигурации — защитные настройки приложения, а не подтверждённые лимиты провайдера.</div>
+  </div>
+</div>
+
+<div class="panel accent tab-panel" id="telegram">
+  <h2>Telegram-уведомления</h2>
+  <p class="muted center" style="margin-bottom:20px;">Опционально — присылает сообщение в группу/чат при каждой находке IP из белого списка.</p>
+
+  <ol class="steps">
+    <li>
+      <h4>Создай бота</h4>
+      <p>Напиши <span class="mono">@BotFather</span> в Telegram → <span class="mono">/newbot</span> → следуй инструкциям. В конце получишь токен вида <span class="mono-box">123456789:AAExampleTokenHere</span> — это <b>TELEGRAM_BOT_TOKEN</b>.</p>
+    </li>
+    <li>
+      <h4>Узнай chat_id</h4>
+      <p>Добавь бота в нужную группу (или используй личный чат с ним), отправь любое сообщение, затем узнай ID чата — проще всего через бота <span class="mono">@userinfobot</span> (для группы ID будет отрицательным числом). Это <b>TELEGRAM_CHAT_ID</b>.</p>
+    </li>
+    <li>
+      <h4>Пропиши в <span class="mono">.env</span> на сервере</h4>
+      <p>Открой <span class="mono">/opt/ip-roller/.env</span>, заполни:</p>
+      <div class="mono-box" style="display:block; text-align:left; white-space:pre;">TELEGRAM_BOT_TOKEN=твой_токен
+TELEGRAM_CHAT_ID=твой_chat_id</div>
+    </li>
+    <li>
+      <h4>Перезапусти сервис</h4>
+      <p><span class="mono-box">systemctl restart ip-roller</span> — без этого новые значения из <span class="mono">.env</span> не подхватятся.</p>
+    </li>
+  </ol>
+</div>
+
+<div class="panel accent tab-panel" id="statuses">
+  <h2>Статусы аккаунта</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th class="text-left">Статус</th><th class="text-left">Что значит</th></tr></thead>
+    <tbody>
+      <tr><td class="text-left"><span class="badge badge-running">running</span></td><td class="text-left">Воркер активен, перебирает IP по выбранным зонам.</td></tr>
+      <tr><td class="text-left"><span class="badge badge-stopped">stopped</span></td><td class="text-left">Остановлен вручную (или ещё не запускался).</td></tr>
+      <tr><td class="text-left"><span class="badge badge-cooldown">cooldown</span></td><td class="text-left">Поймали лимит Selectel (429) или собственный защитный порог — ждём, ничего делать не нужно, само возобновится.</td></tr>
+      <tr><td class="text-left"><span class="badge badge-error">error</span></td><td class="text-left">Ошибка при обращении к API (чаще всего — неверные данные аккаунта или не назначена роль). Подробности — в поле под статусом и во вкладке «Логи».</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="panel accent tab-panel" id="whitelist">
+  <h2>Белый список CIDR</h2>
+  <p class="muted center" style="margin-bottom:16px;">Список диапазонов IP, которые считаются «в БС РКН/ТСПУ» — задаётся вручную и правится на сервере, а не в веб-панели. Актуальный список по городам виден прямо на дашборде.</p>
+  <div class="callout callout-info">
+    <span class="icon">📄</span>
+    <div>Файл на сервере: <span class="mono">/opt/ip-roller/config/cidr_whitelist.json</span>. После правки — <span class="mono">systemctl restart ip-roller</span>, чтобы список перечитался.</div>
+  </div>
+</div>
+
+<div class="panel accent tab-panel" id="troubleshooting">
+  <h2>Частые ошибки</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th class="text-left">Симптом</th><th class="text-left">Причина и что делать</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="text-left mono">401 / 403 при старте</td>
+        <td class="text-left">Неверные username/password/Account ID/Project ID, либо сервисному пользователю не назначена роль <span class="mono">vpc.external_access.admin</span> на этом проекте — перепроверь шаги в разделе «Сервисный пользователь и проект».</td>
+      </tr>
+      <tr>
+        <td class="text-left mono">429 Too Many Requests</td>
+        <td class="text-left">Сервис учитывает заголовок Retry-After, если он есть, и ждёт. Проверяйте лимиты и расходы в кабинете провайдера.</td>
+      </tr>
+      <tr>
+        <td class="text-left mono">Quota exceeded</td>
+        <td class="text-left">Ошибка запроса или квоты. Проверьте HTTP-код, права сервисного пользователя и состояние проекта в Selectel; неисправный запрос не повторяется циклически.</td>
+      </tr>
+      <tr>
+        <td class="text-left mono">Аккаунт не стартует, зон не выбрано</td>
+        <td class="text-left">Перед стартом обязательно выбери хотя бы одну зону во вкладке «Зоны».</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<script>
+// Разделы инструкции переключаются кликом по вкладке — без переходов по
+// якорям (#id), поэтому браузер не скроллит страницу и верхняя часть окна
+// больше не "съезжает" под липкий header. Показываем только один раздел.
+(function () {
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.toc [data-tab-target]'));
+  var panels = Array.prototype.slice.call(document.querySelectorAll('.tab-panel'));
+  if (!tabs.length || !panels.length) return;
+
+  function activate(id) {
+    panels.forEach(function (p) { p.style.display = (p.id === id) ? '' : 'none'; });
+    tabs.forEach(function (t) { t.classList.toggle('active', t.getAttribute('data-tab-target') === id); });
+  }
+
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () { activate(t.getAttribute('data-tab-target')); });
+  });
+
+  activate(tabs[0].getAttribute('data-tab-target'));
+})();
+</script>
+{% endblock %}

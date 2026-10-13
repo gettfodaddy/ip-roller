@@ -1,0 +1,17 @@
+{
+  "note": "Коды зон подтверждены по скриншотам панели Selectel (Доступ -> зоны/регионы), 2026-09-26.",
+  "cities": {
+    "moscow": [
+      {"code": "ru-2", "availability_zone": "1", "flags": [], "enabled": true},
+      {"code": "ru-6", "availability_zone": "1,3,4", "flags": ["multi_zone_pool"], "enabled": true},
+      {"code": "ru-7", "availability_zone": "1", "flags": [], "enabled": true},
+      {"code": "gis-1", "availability_zone": "1", "flags": ["attested_segment"], "enabled": false}
+    ],
+    "spb": [
+      {"code": "ru-1", "availability_zone": "2", "flags": [], "enabled": true},
+      {"code": "ru-3", "availability_zone": "1", "flags": [], "enabled": true},
+      {"code": "ru-9", "availability_zone": "2", "flags": ["needs_confirmation"], "enabled": true},
+      {"code": "gis-2", "availability_zone": "1", "flags": ["attested_segment"], "enabled": false}
+    ]
+  }
+}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Найденные IP — Roller IP{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Найденные IP</h1>
+  <p>Адреса, попавшие в белый список РКН/ТСПУ — оставлены и не удаляются автоматически.</p>
+</div>
+
+<div class="panel panel-tight accent">
+  <div class="found-toolbar">
+    <form method="get" action="/found-ips">
+      <input type="text" name="q" value="{{ query }}" placeholder="Поиск: IP, аккаунт или регион...">
+    </form>
+    <div class="found-count"><span class="num">{{ items | length }}</span> найдено IP</div>
+  </div>
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th class="text-left">🌐 IP-адрес</th>
+        <th>Аккаунт</th>
+        <th>Регион</th>
+        <th>Найден</th>
+        <th class="text-right" style="width:1%;"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in items %}
+      <tr>
+        <td class="text-left mono" style="font-weight:600;">{{ f.ip }}</td>
+        <td>{{ f.account_label }}</td>
+        <td><span class="badge badge-zone">{{ f.zone }}</span></td>
+        <td class="muted" style="font-size:12.5px;" data-ts="{{ f.created_at }}">{{ f.created_at }}</td>
+        <td class="text-right">
+          <button type="button" class="icon-btn copy-btn" data-ip="{{ f.ip }}" onclick="copyIp(this)" title="Скопировать IP" aria-label="Скопировать IP">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="12" height="12" rx="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">
+        <div class="empty-state">
+          <div class="glyph">🔎</div>
+          <div>Пока ничего не найдено — роллер ещё в поиске.</div>
+        </div>
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<script>
+var COPY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+var CHECK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+
+function copyIp(btn) {
+  const ip = btn.getAttribute('data-ip');
+  navigator.clipboard.writeText(ip).then(() => {
+    btn.innerHTML = CHECK_ICON;
+    btn.classList.add('is-copied');
+    btn.title = 'Скопировано ✓';
+    setTimeout(() => {
+      btn.innerHTML = COPY_ICON;
+      btn.classList.remove('is-copied');
+      btn.title = 'Скопировать IP';
+    }, 1200);
+  });
+}
+</script>
+{% endblock %}

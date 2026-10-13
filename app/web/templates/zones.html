@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Зоны — {{ account.label }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Выбрать зоны — {{ account.label }}</h1>
+  <p>Выбирайте только зоны, необходимые вашему проекту. При сетевой ошибке одной зоны worker временно ждёт. Ограничение запросов действует на весь сервис и не умножается на количество аккаунтов.</p>
+  {% if is_running %}
+  <div class="callout callout-info" style="max-width:560px; margin-inline:auto;">
+    <span class="icon">💡</span>
+    <div>Аккаунт сейчас работает — при сохранении воркер будет автоматически перезапущен, чтобы новый выбор зон подхватился сразу же. Вручную жать «Старт» не нужно.</div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="panel accent" style="max-width: 560px; margin-inline:auto;">
+  <form method="post" action="/accounts/{{ account.id }}/zones">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% for city, zones in cities.items() %}
+    {% set visible_zones = zones | selectattr('enabled') | list %}
+    {% if visible_zones %}
+    <div class="zone-group">
+      <h4>{{ city_labels[city] }}</h4>
+      <div class="zone-list">
+        {% for z in visible_zones %}
+        <label class="zone-row">
+          <span class="mono">{{ z.code }}</span>
+          <input type="checkbox" name="zones" value="{{ z.code }}"
+                 {% if z.code in selected %}checked{% endif %}>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    <div class="btn-row">
+      <button type="submit">Сохранить</button>
+      <a href="/" class="btn btn-secondary">Назад</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
