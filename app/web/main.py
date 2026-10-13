@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -134,6 +134,17 @@ async def dashboard(request: Request):
                   active_ip_limit=settings.max_active_managed_ips, active_nav="dashboard",
                   flash=({"kind": "ok", "text": "Аварийная остановка выполнена. Floating IP остались в Selectel без изменений."}
                          if request.query_params.get("notice") == "emergency-stop" else None))
+
+
+@app.get("/api/roller-state", response_class=HTMLResponse)
+async def roller_state(request: Request):
+    """Return only the live account table rows, without redirecting expired sessions."""
+    if not is_authenticated(request):
+        return HTMLResponse("", status_code=401)
+    manager: RollerManager = request.app.state.manager
+    accounts = await db.list_accounts(settings.db_path)
+    rows = [account_view(account, manager.is_running(account.id)) for account in accounts]
+    return render(request, "partials/roller_tbody.html", accounts=rows)
 
 
 @app.get("/accounts/new")

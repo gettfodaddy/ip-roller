@@ -619,6 +619,81 @@
   .theme-light .callout-danger { --callout-bg:#fbefef; --callout-border:#efd6d6; --callout-accent:#b66b6b; }
   .theme-light .callout { color:var(--text-dim); }
   @media (max-width:680px) { .safety-strip { grid-template-columns:1fr; gap:8px; } }
+
+  /* Desktop navigation is a fixed left rail; it never participates in page polling. */
+  @media (min-width:901px) {
+    body:has(> header) { padding-left:248px; }
+    body > header {
+      position:fixed; inset:0 auto 0 0; z-index:40; width:248px; height:100vh;
+      box-sizing:border-box; display:flex; flex-direction:column; align-items:stretch;
+      gap:22px; padding:22px 14px; overflow-y:auto; border-right:1px solid var(--panel-border-soft);
+      border-bottom:0;
+    }
+    body > header nav { display:flex; flex-direction:column; align-items:stretch; gap:5px; }
+    body > header nav { order:0; width:auto; overflow:visible; }
+    body > header nav a { display:block; width:100%; box-sizing:border-box; }
+    body > header .spacer { order:1; flex:1; min-height:16px; }
+    body > header .app-toolbar { order:2; width:100%; margin:0; display:flex; flex-direction:column; gap:8px; }
+    body > header .app-toolbar form, body > header .app-toolbar button { width:100%; }
+    body > main { max-width:1440px; margin:0 auto; }
+  }
+  @media (max-width:900px) {
+    body:has(> header) { padding-left:0; }
+    body > header { position:sticky; top:0; z-index:40; width:auto; height:auto; flex-direction:row; flex-wrap:wrap; align-items:center; }
+    body > header nav { flex-direction:row; flex-wrap:wrap; }
+    body > header .spacer { display:none; }
+  }
+  .page-head-row > .btn-row { display:grid; grid-template-columns:repeat(2,minmax(190px,1fr)); gap:10px; }
+  .page-head-row > .btn-row > form { display:flex; min-width:0; }
+  .page-head-row > .btn-row > form > button,
+  .page-head-row > .btn-row > a.btn { width:100%; min-width:190px; min-height:42px; box-sizing:border-box; justify-content:center; }
+  @media(max-width:560px) { .page-head-row > .btn-row { width:100%; grid-template-columns:1fr; } }
+
+  /* Consistent feedback for pointer and keyboard interactions. */
+  button, .btn, .icon-btn, header nav a {
+    transition: transform .16s cubic-bezier(.2,.75,.25,1), box-shadow .2s ease,
+      filter .2s ease, background-color .2s ease, border-color .2s ease, color .2s ease;
+  }
+  button:hover:not(:disabled), .btn:hover:not([aria-disabled="true"]) {
+    transform: translateY(-2px); filter: brightness(1.08);
+  }
+  button:active:not(:disabled), .btn:active:not([aria-disabled="true"]) {
+    transform: translateY(1px) scale(.975); filter: brightness(.94);
+    transition-duration: .07s;
+  }
+  .btn-secondary:hover:not(:disabled), .icon-btn:hover:not(:disabled) {
+    box-shadow: 0 5px 14px rgba(0,0,0,.16);
+  }
+  header nav a:hover { transform: translateX(3px); }
+  header nav a:active { transform: translateX(1px) scale(.985); }
+
+  /* Animate each newly navigated document, with native cross-page transitions
+     where supported and a short content entrance as a universal fallback. */
+  @view-transition { navigation: auto; }
+  main { animation: page-enter .28s cubic-bezier(.2,.75,.25,1) both; }
+  @keyframes page-enter {
+    from { opacity:0; transform:translateY(8px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+  ::view-transition-old(root) { animation: page-out .16s ease both; }
+  ::view-transition-new(root) { animation: page-in .24s cubic-bezier(.2,.75,.25,1) both; }
+  @keyframes page-out { to { opacity:0; } }
+  @keyframes page-in { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
+
+  /* Drawer is the app's modal surface: backdrop fade, panel slide, then content reveal. */
+  .drawer-backdrop { transition: opacity .24s ease, visibility 0s linear .24s, backdrop-filter .24s ease; }
+  .drawer-backdrop.open { backdrop-filter:blur(5px); transition-delay:0s; }
+  .drawer { transition: transform .32s cubic-bezier(.16,1,.3,1), box-shadow .32s ease; }
+  .drawer.open { box-shadow:-30px 0 76px -20px rgba(0,0,0,.55); }
+  .drawer-content-enter { animation: drawer-content-in .28s .04s cubic-bezier(.2,.75,.25,1) both; }
+  @keyframes drawer-content-in {
+    from { opacity:0; transform:translateY(8px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    main { animation:none; }
+    ::view-transition-old(root), ::view-transition-new(root) { animation:none; }
+  }
 </style>
 </head>
 <body>
@@ -795,6 +870,32 @@ function applyLiveRegionUpdate(regionEl, freshRegionEl) {
   setInterval(poll, intervalMs);
 })();
 
+// Poll only the roller table body. The rest of the dashboard remains untouched.
+(function () {
+  var region = document.getElementById('roller-live-region');
+  if (!region) return;
+  var intervalMs = parseInt(region.getAttribute('data-poll-interval') || '5000', 10);
+  var inFlight = false;
+  function pollRoller() {
+    if (inFlight || document.hidden) return;
+    inFlight = true;
+    fetch('/api/roller-state', { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (response) { return response.ok ? response.text() : null; })
+      .then(function (html) {
+        if (!html) return;
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var fresh = doc.getElementById('roller-live-region');
+        if (!fresh || !region.isConnected || region.innerHTML === fresh.innerHTML) return;
+        region.innerHTML = fresh.innerHTML;
+        formatTimestamps(region);
+        tickCooldowns(region);
+      })
+      .catch(function () {})
+      .finally(function () { inFlight = false; });
+  }
+  setInterval(pollRoller, intervalMs);
+})();
+
 // Выезжающая панель (drawer) справа — для «Зоны» и «Логи» на дашборде,
 // без перехода на отдельную страницу. Прогрессивное улучшение: если JS
 // недоступен, ссылки работают как обычные переходы на полноценные страницы.
@@ -816,6 +917,7 @@ function applyLiveRegionUpdate(regionEl, freshRegionEl) {
   function closeDrawer() {
     backdrop.classList.remove('open');
     drawer.classList.remove('open');
+    bodyEl.classList.remove('drawer-content-enter');
     stopDrawerLive();
     currentUrl = null;
   }
@@ -824,6 +926,9 @@ function applyLiveRegionUpdate(regionEl, freshRegionEl) {
     var doc = new DOMParser().parseFromString(html, 'text/html');
     var main = doc.querySelector('main');
     bodyEl.innerHTML = main ? main.innerHTML : '<div class="empty-state">Не удалось загрузить.</div>';
+    bodyEl.classList.remove('drawer-content-enter');
+    void bodyEl.offsetWidth;
+    bodyEl.classList.add('drawer-content-enter');
     formatTimestamps(bodyEl);
     tickCooldowns(bodyEl);
   }
