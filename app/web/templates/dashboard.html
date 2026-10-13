@@ -10,7 +10,7 @@
 </div>
 
 {% if safety %}
-<div class="panel panel-tight" style="display:flex; flex-wrap:wrap; gap:16px 28px; align-items:center; justify-content:space-between;">
+<div class="panel panel-tight safety-strip">
   <div><span class="muted">Операций сегодня</span><strong class="mono" style="margin-left:8px">{{ safety.today_creates }} / {{ daily_create_limit }}</strong></div>
   <div><span class="muted">Управляемых IP</span><strong class="mono" style="margin-left:8px">{{ safety.managed }} / {{ active_ip_limit }}</strong></div>
   <div><span class="muted">Ошибок удаления</span><strong class="mono {{ 'err' if safety.delete_errors else '' }}" style="margin-left:8px">{{ safety.delete_errors }}</strong></div>

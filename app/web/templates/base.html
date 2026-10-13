@@ -3,47 +3,48 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#202329">
+<link rel="icon" href="/static/roller-mark.svg" type="image/svg+xml">
 <title>{% block title %}Roller IP{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* Calm midnight palette: indigo for actions, cyan for secondary emphasis,
-     neutral slate surfaces and semantic status colors. */
+  /* Neutral graphite surfaces, muted blue actions and restrained status colors. */
   :root {
-    --bg: #0a1020;
-    --bg-soft: #0e1729;
-    --panel: #111c31;
-    --panel-2: #17243a;
-    --panel-border: #2b3b59;
-    --panel-border-soft: #202f48;
-    --text: #edf2ff;
-    --text-dim: #a8b5d0;
-    --text-faint: #7888a8;
+    --bg: #17191d;
+    --bg-soft: #1d2025;
+    --panel: #202329;
+    --panel-2: #24272e;
+    --panel-border: #353942;
+    --panel-border-soft: #2c3037;
+    --text: #f0f1f3;
+    --text-dim: #b0b4bc;
+    --text-faint: #858b96;
 
-    --accent: #7789ff;
-    --accent-rgb: 119,137,255;
-    --accent-2: #52c7e5;
-    --accent-2-rgb: 82,199,229;
-    --accent-mid: #aeb8ff;
-    --accent-strong: #5266dc;
+    --accent: #7892c8;
+    --accent-rgb: 120,146,200;
+    --accent-2: #91a7d2;
+    --accent-2-rgb: 145,167,210;
+    --accent-mid: #8ca3d1;
+    --accent-strong: #647eaf;
 
-    --ok: #62d6ad;
-    --ok-rgb: 98,214,173;
-    --ok-bg: rgba(98,214,173,.12);
-    --warn: #f2bd72;
-    --warn-rgb: 242,189,114;
-    --warn-bg: rgba(242,189,114,.12);
-    --err: #ff8999;
-    --err-rgb: 255,137,153;
-    --err-bg: rgba(255,137,153,.12);
-    --info: #6bc9e8;
-    --info-bg: rgba(107,201,232,.12);
+    --ok: #83b69b;
+    --ok-rgb: 131,182,155;
+    --ok-bg: rgba(131,182,155,.12);
+    --warn: #d4b47a;
+    --warn-rgb: 212,180,122;
+    --warn-bg: rgba(212,180,122,.12);
+    --err: #d88989;
+    --err-rgb: 216,137,137;
+    --err-bg: rgba(216,137,137,.12);
+    --info: #91a7d2;
+    --info-bg: rgba(145,167,210,.12);
 
-    --radius: 16px;
-    --radius-sm: 10px;
-    --shadow: 0 10px 30px -12px rgba(0,0,0,.55);
-    --font-ui: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 2px 12px rgba(0,0,0,.16);
+    --font-ui: "Manrope", -apple-system, "Segoe UI", Roboto, sans-serif;
     --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
   }
 
@@ -305,7 +306,7 @@
   .theme-light .btn-secondary:hover,.theme-light .icon-btn:hover,.theme-light .zone-row:hover { background:#e8effb; color:var(--text); }
   .theme-light .flash-error { color:#8f2637; }
   .theme-light .flash-ok { color:#12684f; }
-  @media(max-width:900px) {
+  @media(max-width:1150px) {
     header { flex-wrap:wrap; }
     header nav { order:3; width:100%; overflow-x:auto; flex-wrap:nowrap; }
     header nav a { white-space:nowrap; }
@@ -496,13 +497,135 @@
     .found-toolbar { justify-content: center; }
     .found-toolbar form { max-width: none; }
   }
+
+  /* Unified understated design tokens and component treatment. */
+  :root {
+    --bg:#17191d; --bg-soft:#1d2025; --panel:#202329; --panel-2:#24272e;
+    --panel-border:#353942; --panel-border-soft:#2c3037;
+    --text:#f0f1f3; --text-dim:#b0b4bc; --text-faint:#858b96;
+    --accent:#7892c8; --accent-rgb:120,146,200; --accent-2:#91a7d2; --accent-2-rgb:145,167,210;
+    --accent-mid:#8ca3d1; --accent-strong:#647eaf;
+    --ok:#83b69b; --ok-rgb:131,182,155; --ok-bg:rgba(131,182,155,.12);
+    --warn:#d4b47a; --warn-rgb:212,180,122; --warn-bg:rgba(212,180,122,.12);
+    --err:#d88989; --err-rgb:216,137,137; --err-bg:rgba(216,137,137,.12);
+    --info:#91a7d2; --info-bg:rgba(145,167,210,.12);
+    --radius:12px; --radius-sm:8px; --shadow:0 2px 12px rgba(0,0,0,.16);
+    --font-ui:"Manrope",-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  .theme-light {
+    --bg:#f4f5f7; --bg-soft:#fff; --panel:#fff; --panel-2:#fafbfc;
+    --panel-border:#e0e3e8; --panel-border-soft:#eceef1;
+    --text:#24272d; --text-dim:#606873; --text-faint:#858c96;
+    --accent:#536f9e; --accent-rgb:83,111,158; --accent-2:#647eaa; --accent-2-rgb:100,126,170;
+    --accent-mid:#647eaa; --accent-strong:#536f9e;
+    --ok:#46775d; --ok-rgb:70,119,93; --ok-bg:rgba(70,119,93,.09);
+    --warn:#8b6a32; --warn-rgb:139,106,50; --warn-bg:rgba(139,106,50,.09);
+    --err:#a64f52; --err-rgb:166,79,82; --err-bg:rgba(166,79,82,.08);
+    --info:#536f9e; --info-bg:rgba(83,111,158,.08);
+    --shadow:0 2px 12px rgba(30,42,58,.05);
+  }
+  html, body { font-family:var(--font-ui); }
+  body { background:var(--bg); color:var(--text); font-size:14px; font-weight:500; }
+  .theme-light body { background:var(--bg); }
+  header { background:var(--panel); border-color:var(--panel-border-soft); backdrop-filter:none; }
+  .theme-light header { background:var(--panel); }
+  header .brand { font-weight:800; }
+  header .brand .mark { background:var(--accent); box-shadow:none; border-radius:4px; }
+  header .brand .brand-logo { display:block; width:32px; height:32px; flex:none; }
+  header .brand .brand-name, .theme-light header .brand .brand-name { color:var(--text); }
+  header .brand .brand-text .brand-sub { color:var(--text-faint); }
+  header nav a { color:var(--text-dim); font-weight:700; }
+  header nav a.active { color:var(--text); background:rgba(var(--accent-rgb),.12); box-shadow:inset 0 0 0 1px rgba(var(--accent-rgb),.22); }
+  a { color:var(--accent-2); }
+  main { max-width:1440px; }
+  .page-head h1, .page-head-row h1 { font-weight:800; letter-spacing:-.035em; }
+  .panel, .drawer { background:var(--panel); border-color:var(--panel-border); box-shadow:var(--shadow); }
+  .panel.accent::before { display:none; }
+  th { background:var(--panel-2); }
+  tbody tr:hover { background:rgba(var(--accent-rgb),.045); }
+  button, .btn { background:var(--accent); color:#fff; border:1px solid var(--accent); box-shadow:none; font-weight:700; }
+  button:hover, .btn:hover { background:var(--accent-strong); border-color:var(--accent-strong); box-shadow:none; transform:translateY(-1px); }
+  .btn-secondary, .icon-btn, .toc button.toc-btn, .toc a { background:var(--panel-2); border:1px solid var(--panel-border); color:var(--text); box-shadow:none; }
+  .btn-secondary:hover, .icon-btn:hover, .toc button.toc-btn:hover, .toc a:hover,
+  .theme-light .btn-secondary:hover, .theme-light .icon-btn:hover, .theme-light .zone-row:hover {
+    background:rgba(var(--accent-rgb),.10); border-color:rgba(var(--accent-rgb),.35); color:var(--text); box-shadow:none;
+  }
+  .btn-danger { background:#a95759; border-color:#a95759; box-shadow:none; }
+  .btn-danger:hover { background:#91494b; border-color:#91494b; }
+  input[type=text], input[type=password], input[type=search], select, textarea { background:var(--bg-soft); border-color:var(--panel-border); color:var(--text); font-family:var(--font-ui); font-weight:600; }
+  input:focus, select:focus, textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(var(--accent-rgb),.15); }
+  label { color:var(--text-dim); font-weight:700; }
+  .stat-card { background:var(--bg-soft); border-color:var(--panel-border-soft); }
+  .stat-card .num { color:var(--text); font-family:var(--font-ui); font-weight:800; }
+  .console, .theme-light .console { background:var(--bg-soft); color:var(--text); }
+  .console-ip, .theme-light .console-ip { color:var(--text); }
+  .callout { background:var(--panel-2); border-color:var(--panel-border); color:var(--text-dim); }
+  .callout-info, .callout-warn, .callout-tip, .callout-danger { color:var(--text-dim); }
+  .callout b, .callout strong, .theme-light .callout b, .theme-light .callout strong { color:var(--text); }
+  .flash-error { color:var(--err); }
+  .flash-ok { color:var(--ok); }
+  .kicker { color:var(--accent-2); font-weight:800; }
+  .chip:has(input:checked) { box-shadow:none; }
+  .chip input:checked ~ span, .toc button.toc-btn.active, .toc button.toc-btn:hover { color:var(--text); }
+  .zone-row:hover { background:rgba(var(--accent-rgb),.08); }
+  .theme-light .theme-toggle { color:var(--text); }
+  .theme-light .stat-card .num, .theme-light .brand .brand-name { color:var(--text); }
+  .drawer-close:hover { color:var(--text); background:var(--panel-2); }
+  @media (max-width:720px) {
+    header nav { justify-content:flex-start; }
+    .page-head-row { justify-content:space-between; text-align:left; }
+  }
+
+  /* Final component refinements: square geometry, clear button hierarchy,
+     padded safety metrics and distinct advisory tones. */
+  .panel, .stat-card, .drawer, .console, .zone-list,
+  button, .btn, input, select, textarea, .icon-btn, .chip,
+  .toc a, .toc button.toc-btn, header nav a, .callout { border-radius:4px; }
+  .panel, .stat-card, .drawer { box-shadow:var(--shadow); }
+  .safety-strip {
+    display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px;
+    padding:14px 16px; align-items:center;
+  }
+  .safety-strip > div { min-width:0; overflow-wrap:anywhere; }
+  .safety-strip .mono { font-family:var(--font-ui); font-weight:800; white-space:nowrap; }
+  .brand-logo { display:block; width:32px; height:32px; flex:none; }
+  .login-brand-logo { width:48px; height:48px; }
+
+  button, .btn { background:var(--accent); border:1px solid var(--accent); color:#fff; box-shadow:none; font-weight:700; }
+  button:hover:not(:disabled), .btn:hover:not([aria-disabled="true"]) {
+    background:var(--accent-strong); border-color:var(--accent-strong); box-shadow:none;
+  }
+  .btn-secondary, .icon-btn, .toc button.toc-btn, .toc a {
+    background:transparent; border:1px solid var(--panel-border); color:var(--text-dim); box-shadow:none;
+  }
+  .btn-secondary:hover:not(:disabled), .icon-btn:hover:not(:disabled), .toc button.toc-btn:hover, .toc a:hover {
+    color:var(--text); background:rgba(var(--accent-rgb),.10); border-color:rgba(var(--accent-rgb),.42); box-shadow:none;
+  }
+  button:disabled, .btn:disabled, .btn-secondary:disabled { opacity:.48; cursor:not-allowed; transform:none; }
+  header nav a { border-radius:4px; color:var(--text-dim); }
+  header nav a:not(.active) { background:transparent; box-shadow:none; }
+  header nav a:not(.active):hover { color:var(--text); background:rgba(var(--accent-rgb),.08); }
+  header nav a.active { color:var(--text); background:rgba(var(--accent-rgb),.16); box-shadow:inset 0 -2px 0 var(--accent); }
+
+  .callout-info { --callout-accent:#7f9bc9; --callout-bg:#252f40; --callout-border:#3b4c67; }
+  .callout-warn { --callout-accent:#c5a365; --callout-bg:#352f24; --callout-border:#574b34; }
+  .callout-tip { --callout-accent:#78a58a; --callout-bg:#25342c; --callout-border:#3d5747; }
+  .callout-danger { --callout-accent:#c27878; --callout-bg:#38282a; --callout-border:#5b3c40; }
+  .callout { background:var(--callout-bg,var(--panel-2)); border-color:var(--callout-border,var(--panel-border)); border-left:3px solid var(--callout-accent,var(--panel-border)); color:var(--text-dim); }
+  .callout b, .callout strong { color:var(--text); }
+  .theme-light .callout-info { --callout-bg:#eff4fb; --callout-border:#d3deed; --callout-accent:#6e88b3; }
+  .theme-light .callout-warn { --callout-bg:#faf4e8; --callout-border:#eadbbd; --callout-accent:#b08a4c; }
+  .theme-light .callout-tip { --callout-bg:#eff6f1; --callout-border:#d4e5d9; --callout-accent:#6d9a7d; }
+  .theme-light .callout-danger { --callout-bg:#fbefef; --callout-border:#efd6d6; --callout-accent:#b66b6b; }
+  .theme-light .callout { color:var(--text-dim); }
+  @media (max-width:680px) { .safety-strip { grid-template-columns:1fr; gap:8px; } }
 </style>
 </head>
 <body>
 {% if authenticated %}
 <header>
   <div class="brand">
-    <span class="mark">S</span>
+    <img class="brand-logo" src="/static/roller-mark.svg" alt="">
     <span class="brand-text">
       <span class="brand-name">Roller <span class="accent-word">IP</span></span>
       <span class="brand-sub">Selectel</span>

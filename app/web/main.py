@@ -10,9 +10,11 @@ from __future__ import annotations
 import logging
 import asyncio
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -28,6 +30,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 log = logging.getLogger("ip-roller.web")
 
 templates = Jinja2Templates(directory=str((__import__("pathlib").Path(__file__).parent / "templates")))
+static_dir = Path(__file__).parent / "static"
 
 
 @asynccontextmanager
@@ -60,6 +63,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 app.add_middleware(SessionMiddleware, secret_key=settings.session_secret, same_site="lax", https_only=settings.session_https_only)
 
 
