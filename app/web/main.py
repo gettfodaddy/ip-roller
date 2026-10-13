@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -136,15 +136,38 @@ async def dashboard(request: Request):
                          if request.query_params.get("notice") == "emergency-stop" else None))
 
 
-@app.get("/api/roller-state", response_class=HTMLResponse)
+@app.get("/api/roller-state", response_class=JSONResponse)
 async def roller_state(request: Request):
-    """Return only the live account table rows, without redirecting expired sessions."""
+    """Return fresh roller counters and account rows without reloading the page."""
     if not is_authenticated(request):
-        return HTMLResponse("", status_code=401)
+        return JSONResponse({"error": "authentication_required"}, status_code=401)
     manager: RollerManager = request.app.state.manager
     accounts = await db.list_accounts(settings.db_path)
     rows = [account_view(account, manager.is_running(account.id)) for account in accounts]
-    return render(request, "partials/roller_tbody.html", accounts=rows)
+    safety = await db.safety_summary(settings.db_path)
+    analytics = await db.get_analytics(
+        settings.db_path, hours=24,
+        cost_per_ip_hour_rub=settings.floating_ip_cost_per_hour_rub,
+    )
+    circuit = await db.get_service_circuit(settings.db_path)
+    rows_response = render(request, "partials/roller_tbody.html", accounts=rows)
+    running = sum(1 for account in rows if account["is_running"])
+    return JSONResponse({
+        "safety": safety,
+        "accounts": {
+            "count": len(rows), "running": running,
+            "attempts": sum(account["total_attempts"] for account in rows),
+            "matches": sum(account["total_matches"] for account in rows),
+        },
+        "analytics": {
+            "attempts": analytics["attempts"],
+            "matches": analytics["totals"].get("match", 0),
+            "misses": analytics["totals"].get("miss", 0),
+            "errors": analytics["errors"],
+        },
+        "circuit": circuit,
+        "rowsHtml": rows_response.body.decode("utf-8"),
+    })
 
 
 @app.get("/accounts/new")

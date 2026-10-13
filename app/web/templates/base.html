@@ -694,6 +694,12 @@
     main { animation:none; }
     ::view-transition-old(root), ::view-transition-new(root) { animation:none; }
   }
+  [hidden] { display:none !important; }
+  .metric-updated { animation:metric-updated .55s ease; }
+  @keyframes metric-updated {
+    0% { color:var(--accent-2); transform:translateY(2px); }
+    100% { color:inherit; transform:translateY(0); }
+  }
 </style>
 </head>
 <body>
@@ -870,25 +876,71 @@ function applyLiveRegionUpdate(regionEl, freshRegionEl) {
   setInterval(poll, intervalMs);
 })();
 
-// Poll only the roller table body. The rest of the dashboard remains untouched.
+// Poll dashboard data and patch only live fields and the account table.
 (function () {
   var region = document.getElementById('roller-live-region');
   if (!region) return;
-  var intervalMs = parseInt(region.getAttribute('data-poll-interval') || '5000', 10);
+  var intervalMs = parseInt(region.getAttribute('data-poll-interval') || '3000', 10);
   var inFlight = false;
+  function setText(id, value) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    value = String(value == null ? 0 : value);
+    if (el.textContent === value) return;
+    el.textContent = value;
+    el.classList.remove('metric-updated');
+    void el.offsetWidth;
+    el.classList.add('metric-updated');
+  }
   function pollRoller() {
     if (inFlight || document.hidden) return;
     inFlight = true;
-    fetch('/api/roller-state', { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-      .then(function (response) { return response.ok ? response.text() : null; })
-      .then(function (html) {
-        if (!html) return;
-        var doc = new DOMParser().parseFromString(html, 'text/html');
+    fetch('/api/roller-state', { credentials: 'same-origin', cache:'no-store', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept':'application/json' } })
+      .then(function (response) { return response.ok ? response.json() : null; })
+      .then(function (data) {
+        if (!data || !region.isConnected) return;
+        setText('today-create-count', data.safety.today_creates);
+        setText('managed-ip-count', data.safety.managed);
+        setText('delete-error-count', data.safety.delete_errors);
+        var deleteCount = document.getElementById('delete-error-count');
+        if (deleteCount) deleteCount.classList.toggle('err', data.safety.delete_errors > 0);
+        setText('uncertain-count', data.safety.uncertain);
+        var uncertain = document.getElementById('uncertain-warning');
+        if (uncertain) uncertain.hidden = data.safety.uncertain < 1;
+
+        setText('account-count', data.accounts.count);
+        setText('running-account-count', data.accounts.running);
+        setText('account-attempt-count', data.accounts.attempts);
+        setText('account-match-count', data.accounts.matches);
+        var summary = document.getElementById('account-summary');
+        if (summary) summary.hidden = data.accounts.count < 1;
+
+        setText('analytics-attempt-count', data.analytics.attempts);
+        setText('analytics-match-count', data.analytics.matches);
+        setText('analytics-miss-count', data.analytics.misses);
+        setText('analytics-error-count', data.analytics.errors);
+        var analyticsErrors = document.getElementById('analytics-error-count');
+        if (analyticsErrors) analyticsErrors.classList.toggle('err', data.analytics.errors > 0);
+
+        var circuit = document.getElementById('service-circuit-warning');
+        if (circuit) {
+          circuit.hidden = !data.circuit.open_until;
+          if (data.circuit.open_until) {
+            circuit.setAttribute('data-cooldown-until', data.circuit.open_until);
+            setText('service-circuit-reason', data.circuit.reason || '');
+            tickCooldowns(circuit);
+          } else {
+            circuit.removeAttribute('data-cooldown-until');
+          }
+        }
+
+        var doc = new DOMParser().parseFromString(data.rowsHtml, 'text/html');
         var fresh = doc.getElementById('roller-live-region');
-        if (!fresh || !region.isConnected || region.innerHTML === fresh.innerHTML) return;
-        region.innerHTML = fresh.innerHTML;
-        formatTimestamps(region);
-        tickCooldowns(region);
+        if (fresh && region.innerHTML !== fresh.innerHTML) {
+          region.innerHTML = fresh.innerHTML;
+          formatTimestamps(region);
+          tickCooldowns(region);
+        }
       })
       .catch(function () {})
       .finally(function () { inFlight = false; });

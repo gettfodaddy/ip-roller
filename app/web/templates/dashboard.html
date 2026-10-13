@@ -9,53 +9,45 @@
   </div>
 </div>
 
-{% if safety %}
 <div class="panel panel-tight safety-strip">
-  <div><span class="muted">Операций сегодня</span><strong class="mono" style="margin-left:8px">{{ safety.today_creates }} / {{ daily_create_limit }}</strong></div>
-  <div><span class="muted">Управляемых IP</span><strong class="mono" style="margin-left:8px">{{ safety.managed }} / {{ active_ip_limit }}</strong></div>
-  <div><span class="muted">Ошибок удаления</span><strong class="mono {{ 'err' if safety.delete_errors else '' }}" style="margin-left:8px">{{ safety.delete_errors }}</strong></div>
-  {% if safety.uncertain %}<div class="badge badge-error">Нужна ручная сверка: {{ safety.uncertain }} неопределённых операций</div>{% endif %}
+  <div><span class="muted">Операций сегодня</span><strong class="mono" style="margin-left:8px"><span id="today-create-count">{{ safety.today_creates }}</span> / {{ daily_create_limit }}</strong></div>
+  <div><span class="muted">Управляемых IP</span><strong class="mono" style="margin-left:8px"><span id="managed-ip-count">{{ safety.managed }}</span> / {{ active_ip_limit }}</strong></div>
+  <div><span class="muted">Ошибок удаления</span><strong id="delete-error-count" class="mono {{ 'err' if safety.delete_errors else '' }}" style="margin-left:8px">{{ safety.delete_errors }}</strong></div>
+  <div id="uncertain-warning" class="badge badge-error" {% if not safety.uncertain %}hidden{% endif %}>Нужна ручная сверка: <span id="uncertain-count">{{ safety.uncertain }}</span> неопределённых операций</div>
 </div>
-{% endif %}
-{% if circuit and circuit.open_until %}
-<div class="callout callout-warn" data-cooldown-until="{{ circuit.open_until }}"><span class="icon">⏸</span><div><strong>Общая пауза API Selectel.</strong> {{ circuit.reason }}. Все воркеры ждут истечения cooldown.</div></div>
-{% endif %}
+<div id="service-circuit-warning" class="callout callout-warn" {% if not circuit or not circuit.open_until %}hidden{% else %}data-cooldown-until="{{ circuit.open_until }}"{% endif %}><span class="icon">⏸</span><div><strong>Общая пауза API Selectel.</strong> <span id="service-circuit-reason">{{ circuit.reason if circuit else '' }}</span>. Все воркеры ждут истечения cooldown.</div></div>
 
-{% if accounts %}
-<div class="stat-grid">
+<div id="account-summary" class="stat-grid" {% if not accounts %}hidden{% endif %}>
   <div class="stat-card">
-    <div class="num">{{ accounts | length }}</div>
+    <div id="account-count" class="num">{{ accounts | length }}</div>
     <div class="label">Аккаунтов</div>
   </div>
   <div class="stat-card">
-    <div class="num ok">{{ accounts | selectattr('is_running') | list | length }}</div>
+    <div id="running-account-count" class="num ok">{{ accounts | selectattr('is_running') | list | length }}</div>
     <div class="label">Работают</div>
   </div>
   <div class="stat-card">
-    <div class="num">{{ accounts | sum(attribute='total_attempts') }}</div>
+    <div id="account-attempt-count" class="num">{{ accounts | sum(attribute='total_attempts') }}</div>
     <div class="label">Всего попыток</div>
   </div>
   <div class="stat-card">
-    <div class="num ok">{{ accounts | sum(attribute='total_matches') }}</div>
+    <div id="account-match-count" class="num ok">{{ accounts | sum(attribute='total_matches') }}</div>
     <div class="label">Найдено в БС</div>
   </div>
 </div>
-{% endif %}
 
-{% if analytics %}
 <div class="panel">
   <div class="section-title">
     <div><h2>Результаты за 24 часа</h2><div class="metric-note">Фактические записи проверок и ошибок из базы проекта</div></div>
     <a class="btn btn-secondary btn-sm" href="/analytics">Открыть аналитику →</a>
   </div>
   <div class="stat-grid" style="margin-bottom:0;">
-    <div class="stat-card"><div class="num">{{ analytics.attempts }}</div><div class="label">IP проверено</div></div>
-    <div class="stat-card"><div class="num ok">{{ analytics.totals.get('match', 0) }}</div><div class="label">Совпадений</div></div>
-    <div class="stat-card"><div class="num">{{ analytics.totals.get('miss', 0) }}</div><div class="label">Не совпало с CIDR</div></div>
-    <div class="stat-card"><div class="num {{ 'err' if analytics.errors else '' }}">{{ analytics.errors }}</div><div class="label">Ошибок API/сети</div></div>
+    <div class="stat-card"><div id="analytics-attempt-count" class="num">{{ analytics.attempts }}</div><div class="label">IP проверено</div></div>
+    <div class="stat-card"><div id="analytics-match-count" class="num ok">{{ analytics.totals.get('match', 0) }}</div><div class="label">Совпадений</div></div>
+    <div class="stat-card"><div id="analytics-miss-count" class="num">{{ analytics.totals.get('miss', 0) }}</div><div class="label">Не совпало с CIDR</div></div>
+    <div class="stat-card"><div id="analytics-error-count" class="num {{ 'err' if analytics.errors else '' }}">{{ analytics.errors }}</div><div class="label">Ошибок API/сети</div></div>
   </div>
 </div>
-{% endif %}
 
 <div class="panel panel-tight accent">
   <div class="table-wrap">
