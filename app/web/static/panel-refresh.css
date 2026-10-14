@@ -112,3 +112,8 @@ main .account-table th, main .account-table td { text-align:center; }
 .account-table .status-detail { margin-inline:auto !important; }
 .metric-note, .callout { text-align:center; }
 .stat-card .num { font-variant-numeric:tabular-nums; }
+main .ip-history-table th, main .ip-history-table td {
+  text-align:center !important; vertical-align:middle; padding:15px 16px;
+}
+main .ip-history-table .badge { justify-content:center; }
+.filter-results-count { text-align:center; }
