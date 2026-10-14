@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Аудит — Roller IP{% endblock %}
 {% block content %}
-<div class="page-head-row"><div><h1>Журнал действий</h1><p class="muted">Изменения аккаунтов, запуск и остановка workers, ручные действия с ресурсами. Секреты сюда не записываются.</p></div></div>
-<div class="panel panel-tight accent"><div class="table-wrap"><table>
-  <thead><tr><th>Время</th><th>Пользователь</th><th>Действие</th><th>Цель</th><th class="text-left">Детали</th></tr></thead>
+<div class="page-head-row"><div><div class="kicker">Аудит</div><h1>{{ icon('audit') }} Журнал действий</h1><p class="muted">Изменения аккаунтов, запуск и остановка воркеров, ручные действия с ресурсами. Секреты сюда не записываются.</p></div></div>
+<div class="panel panel-tight accent"><div class="table-wrap"><table class="audit-table">
+  <thead><tr><th>{{ icon('history') }} Время</th><th>{{ icon('account') }} Пользователь</th><th>{{ icon('start') }} Действие</th><th>{{ icon('resources') }} Цель</th><th>{{ icon('logs') }} Детали</th></tr></thead>
   <tbody>{% for event in events %}<tr>
-    <td data-ts="{{ event.created_at }}">{{ event.created_at }}</td><td>{{ event.actor }}</td>
-    <td><span class="badge badge-zone">{{ event.action }}</span></td><td>{{ event.target }}</td><td class="text-left muted">{{ event.details }}</td>
+    <td data-ts="{{ event.created_at }}">{{ event.created_at }}</td><td><span class="audit-actor">{{ icon('account') }} {{ event.actor }}</span></td>
+    {% set action_icon = {'worker_started':'start', 'worker_stopped':'stop', 'account_created':'add', 'account_updated':'edit', 'account_deleted':'delete', 'uncertain_operation_resolved':'audit'}.get(event.action, 'logs') %}
+    <td><span class="badge audit-action">{{ icon(action_icon) }} {{ event.action }}</span></td><td>{{ event.target or '—' }}</td><td class="muted">{{ event.details or '—' }}</td>
   </tr>{% else %}<tr><td colspan="5"><div class="empty-state">Записей пока нет</div></td></tr>{% endfor %}</tbody>
 </table></div></div>
 {% endblock %}

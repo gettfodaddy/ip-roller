@@ -117,3 +117,11 @@ main .ip-history-table th, main .ip-history-table td {
 }
 main .ip-history-table .badge { justify-content:center; }
 .filter-results-count { text-align:center; }
+main .audit-table { min-width:780px; font-family:var(--font-ui); }
+main .audit-table th, main .audit-table td { text-align:center !important; vertical-align:middle; padding:16px; }
+.audit-table th .ui-icon { width:16px; height:16px; margin-right:6px; color:var(--accent-2); }
+.audit-actor { display:inline-flex; align-items:center; justify-content:center; gap:8px; }
+.audit-actor .ui-icon { width:18px; height:18px; color:var(--accent-2); }
+.audit-action { font-family:var(--font-ui); background:var(--info-bg); color:var(--accent-2); justify-content:center; }
+.audit-action::before { display:none; }
+.audit-action .ui-icon { width:15px; height:15px; }
