@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#202329">
+<meta name="theme-color" content="#152237">
 <link rel="icon" href="/static/roller-mark.svg" type="image/svg+xml">
 <title>{% block title %}Roller IP{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -701,8 +701,10 @@
     100% { color:inherit; transform:translateY(0); }
   }
 </style>
+<link rel="stylesheet" href="/static/panel-refresh.css?v=20261014b">
 </head>
 <body>
+{% from 'partials/icons.html' import icon %}
 {% if authenticated %}
 <header>
   <div class="brand">
@@ -713,19 +715,14 @@
     </span>
   </div>
   <nav>
-    <a href="/" class="{{ 'active' if active_nav == 'dashboard' else '' }}">Дашборд</a>
-    <a href="/analytics" class="{{ 'active' if active_nav == 'analytics' else '' }}">Аналитика</a>
-    <a href="/ip-history" class="{{ 'active' if active_nav == 'history' else '' }}">История IP</a>
-    <a href="/found-ips" class="{{ 'active' if active_nav == 'found' else '' }}">Найденные IP</a>
-    <a href="/managed-resources" class="{{ 'active' if active_nav == 'resources' else '' }}">Ресурсы</a>
-    <a href="/logs" class="{{ 'active' if active_nav == 'logs' else '' }}">Общие логи</a>
-    <a href="/audit" class="{{ 'active' if active_nav == 'audit' else '' }}">Аудит</a>
-    <a href="/help" class="{{ 'active' if active_nav == 'help' else '' }}">Инструкция</a>
+    {% for href, key, label in [('/', 'dashboard', 'Дашборд'), ('/analytics', 'analytics', 'Аналитика'), ('/ip-history', 'history', 'История IP'), ('/found-ips', 'found', 'Найденные IP'), ('/managed-resources', 'resources', 'Ресурсы'), ('/logs', 'logs', 'Общие логи'), ('/audit', 'audit', 'Аудит'), ('/help', 'help', 'Инструкция')] %}
+    <a href="{{ href }}" class="{{ 'active' if active_nav == key else '' }}" {% if active_nav == key %}aria-current="page"{% endif %}>{{ icon(key) }}<span>{{ label }}</span></a>
+    {% endfor %}
   </nav>
   <div class="spacer"></div>
   <div class="app-toolbar">
-    <button type="button" class="btn-secondary btn-sm theme-toggle" id="theme-toggle" aria-label="Переключить тему">Светлая тема</button>
-    <form action="/logout" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn-secondary btn-sm">Выйти</button></form>
+    <button type="button" class="toolbar-icon theme-toggle" id="theme-toggle" aria-label="Включить светлую тему" title="Включить светлую тему"><span class="theme-sun">{{ icon('sun') }}</span><span class="theme-moon">{{ icon('moon') }}</span></button>
+    <form action="/logout" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="toolbar-icon logout-button" aria-label="Выйти" title="Выйти">{{ icon('logout') }}</button></form>
   </div>
 </header>
 {% endif %}
@@ -802,7 +799,11 @@ document.addEventListener('DOMContentLoaded', function () {
   try { savedTheme = localStorage.getItem('ip-roller-theme'); } catch (_) {}
   if (savedTheme === 'light') document.documentElement.classList.add('theme-light');
   if (themeButton) {
-    function updateThemeButton() { themeButton.textContent = document.documentElement.classList.contains('theme-light') ? 'Тёмная тема' : 'Светлая тема'; }
+    function updateThemeButton() {
+      var label = document.documentElement.classList.contains('theme-light') ? 'Включить тёмную тему' : 'Включить светлую тему';
+      themeButton.setAttribute('aria-label', label);
+      themeButton.title = label;
+    }
     updateThemeButton();
     themeButton.addEventListener('click', function () {
       var light = document.documentElement.classList.toggle('theme-light');
