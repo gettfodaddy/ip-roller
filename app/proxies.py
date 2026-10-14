@@ -3,11 +3,14 @@ from __future__ import annotations
 
 import asyncio
 import ipaddress
+import logging
 import time
 from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
+
+log = logging.getLogger('ip-roller.proxy')
 
 
 def load_candidates(path: Path) -> list[str]:
@@ -42,15 +45,23 @@ async def check_proxy(url: str, zones: list[str], timeout: float = 8) -> bool:
     try:
         async with httpx.AsyncClient(proxy=url, verify=True, trust_env=False,
                                      timeout=timeout, follow_redirects=False) as client:
-            for _ in range(2):
+            for attempt in range(1, 3):
                 for endpoint, accepted in endpoints:
+                    started = time.monotonic()
+                    log.info('Проверка прокси=%s проход=%s API=%s', url, attempt, urlsplit(endpoint).hostname)
                     async with client.stream('GET', endpoint) as response:
+                        log.info('Проверка прокси=%s API=%s HTTP=%s время=%.2fс', url, urlsplit(endpoint).hostname, response.status_code, time.monotonic() - started)
                         if response.status_code not in accepted:
+                            log.warning('Прокси=%s отклонён: неожиданный HTTP=%s API=%s', url, response.status_code, urlsplit(endpoint).hostname)
                             return False
                         if endpoint.endswith('/auth/tokens') and 'Keystone' not in response.headers.get('www-authenticate', ''):
+                            log.warning('Прокси=%s отклонён: IAM не вернул ожидаемый заголовок Keystone', url)
                             return False
+        log.info('Прокси=%s прошёл два прохода проверки зон=%s', url, ','.join(zones))
         return True
-    except (httpx.HTTPError, OSError, ValueError):
+    except (httpx.HTTPError, OSError, ValueError) as exc:
+        reason = 'TLS certificate verification failed' if 'CERTIFICATE_VERIFY_FAILED' in str(exc) else type(exc).__name__
+        log.warning('Прокси=%s отклонён: API=%s причина=%s', url, urlsplit(endpoint).hostname, reason)
         return False
 
 
@@ -71,6 +82,7 @@ class ProxyPool:
                 try:
                     candidates = load_candidates(self.path)
                 except OSError:
+                    log.warning('Не удалось прочитать файл кандидатов прокси')
                     candidates = []
                 for candidate in candidates:
                     if candidate in self.leased or self.rejected.get(candidate, 0) > time.monotonic():
@@ -80,6 +92,7 @@ class ProxyPool:
                         return candidate
                     self.rejected[candidate] = time.monotonic() + self.quarantine
             await status('cooldown', 'Автопауза: нет проверенного прокси; ожидание обновления пула')
+            log.info('Нет свободного проверенного прокси; кандидатов=%s занятых=%s повтор через=%sс', len(candidates), len(self.leased), self.retry)
             await asyncio.sleep(self.retry)
 
     def release(self, url, *, failed=False):
@@ -90,8 +103,9 @@ class ProxyPool:
 
 class CheckedProxyTransport(httpx.AsyncBaseTransport):
     """Serialise account traffic across IAM, creation, cleanup and reconciliation."""
-    def __init__(self, pool, zones, status, stop_event=None):
+    def __init__(self, pool, zones, status, stop_event=None, account_label='unknown'):
         self.pool, self.zones, self.status = pool, zones, status
+        self.account_label = account_label
         self.stop_event = stop_event
         self.lock = asyncio.Lock()
         self.transport = None
@@ -129,7 +143,9 @@ class CheckedProxyTransport(httpx.AsyncBaseTransport):
                 self.url = await self.acquire_cancellable()
                 self.transport = httpx.AsyncHTTPTransport(proxy=self.url, verify=True, retries=0)
                 self.failures = 0
+                log.info('[%s] Активный прокси=%s зоны=%s', self.account_label, self.url, ','.join(self.zones))
                 await self.status('running', 'Прокси проверен и установлен; работа возобновлена')
+            started = time.monotonic()
             try:
                 response = await self.transport.handle_async_request(request)
                 try:
@@ -137,9 +153,11 @@ class CheckedProxyTransport(httpx.AsyncBaseTransport):
                 finally:
                     await response.aclose()
             except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout,
-                    httpx.WriteTimeout, httpx.ReadError, httpx.WriteError, httpx.ProxyError):
+                    httpx.WriteTimeout, httpx.ReadError, httpx.WriteError, httpx.ProxyError) as exc:
                 self.failures += 1
+                log.warning('[%s] Прокси=%s метод=%s API=%s ошибка=%s подряд=%s/%s время=%.2fс', self.account_label, self.url, request.method, request.url.host, type(exc).__name__, self.failures, self.pool.threshold, time.monotonic() - started)
                 if self.failures >= self.pool.threshold:
+                    log.warning('[%s] Прокси=%s исключён на %sс; подбор замены; запрос не повторяется', self.account_label, self.url, self.pool.quarantine)
                     self.pool.release(self.url, failed=True)
                     self.url = None
                     old, self.transport = self.transport, None
@@ -148,12 +166,14 @@ class CheckedProxyTransport(httpx.AsyncBaseTransport):
                 # Especially POST: never replay after an ambiguous failure.
                 raise
             self.failures = 0
+            log.info('[%s] Прокси=%s метод=%s API=%s HTTP=%s время=%.2fс', self.account_label, self.url, request.method, request.url.host, response.status_code, time.monotonic() - started)
             # HTTP 429/401/403 do not trigger proxy rotation.
             return response
 
     async def aclose(self):
         self.closed = True
         if self.url:
+            log.info('[%s] Прокси=%s освобождён при закрытии клиента', self.account_label, self.url)
             self.pool.release(self.url, failed=self.failures > 0)
             self.url = None
         if self.transport:

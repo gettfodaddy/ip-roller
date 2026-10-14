@@ -42,7 +42,7 @@ class RollerManager:
         async def status(value, detail):
             await db.update_account_status(self.db_path, account.id, value, detail)
 
-        transport = CheckedProxyTransport(self._proxy_pool, account.selected_zones, status, self._stop_events.get(account.id)) if self._proxy_pool else None
+        transport = CheckedProxyTransport(self._proxy_pool, account.selected_zones, status, self._stop_events.get(account.id), account_label=account.label) if self._proxy_pool else None
         client = SelectelNeutronClient(
             username=account.username,
             password=account.password,
