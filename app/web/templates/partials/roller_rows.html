@@ -1,6 +1,7 @@
+{% from 'partials/icons.html' import icon %}
 {% for a in accounts %}
 <tr>
-  <td class="text-left"><strong>{{ a.label }}</strong></td>
+  <td class="text-left"><div class="account-name"><span class="account-avatar">{{ icon('account') }}</span><strong>{{ a.label }}</strong></div></td>
   <td class="muted">
     {% if a.selected_zones %}
       <span class="mono" style="font-size:12.5px;">{{ a.selected_zones | join(', ') }}</span>
@@ -14,7 +15,7 @@
   <td>
     <span class="badge badge-{{ a.status }}">{{ a.status }}</span>
     {% if a.status_detail %}
-    <div class="faint" style="font-size:11.5px; margin-top:5px; max-width:220px; margin-inline:auto;" {% if a.status == 'cooldown' and a.cooldown_until %}data-cooldown-until="{{ a.cooldown_until }}"{% endif %}>{{ a.status_detail }}</div>
+    <div class="faint status-detail" style="font-size:11.5px; margin-top:5px; max-width:220px;" {% if a.status == 'cooldown' and a.cooldown_until %}data-cooldown-until="{{ a.cooldown_until }}"{% endif %}>{{ a.status_detail }}</div>
     {% endif %}
   </td>
   <td class="mono">{{ a.total_attempts }}</td>
@@ -26,9 +27,9 @@
       {% else %}
       <form method="post" action="/accounts/{{ a.id }}/start"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn-sm" type="submit">▶ Старт</button></form>
       {% endif %}
-      <a href="/accounts/{{ a.id }}/zones" class="btn btn-secondary btn-sm" data-drawer data-drawer-title="Зоны — {{ a.label }}">Зоны</a>
-      <a href="/accounts/{{ a.id }}/logs" class="btn btn-secondary btn-sm" data-drawer data-drawer-title="Логи — {{ a.label }}" data-drawer-live="true">Логи</a>
-      <a href="/accounts/{{ a.id }}/edit" class="btn btn-secondary btn-sm" data-drawer data-drawer-title="Редактировать — {{ a.label }}">Редактировать</a>
+      <a href="/accounts/{{ a.id }}/zones" class="btn btn-secondary btn-sm" data-drawer data-drawer-title="Зоны — {{ a.label }}">{{ icon('zones') }} Зоны</a>
+      <a href="/accounts/{{ a.id }}/logs" class="btn btn-secondary btn-sm" data-drawer data-drawer-title="Логи — {{ a.label }}" data-drawer-live="true">{{ icon('logs') }} Логи</a>
+      <a href="/accounts/{{ a.id }}/edit" class="btn btn-secondary btn-sm" data-drawer data-drawer-title="Редактировать — {{ a.label }}">{{ icon('edit') }} Редактировать</a>
       <form method="post" action="/accounts/{{ a.id }}/delete" onsubmit="return confirm('Удалить аккаунт {{ a.label }}? Это остановит воркер и удалит историю.');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn-danger btn-sm" type="submit">Удалить</button></form>
     </div>
   </td>

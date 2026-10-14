@@ -2,7 +2,7 @@
 {% block title %}Дашборд — Roller IP{% endblock %}
 {% block content %}
 <div class="page-head-row">
-  <div><div class="kicker">Панель управления</div><h1>Аккаунты</h1><div class="muted">Состояние воркеров, лимитов и результатов проверки.</div></div>
+  <div><div class="kicker">Панель управления</div><h1>{{ icon('account') }} Аккаунты</h1><div class="muted">Состояние воркеров, лимитов и результатов проверки.</div></div>
   <div class="btn-row">
     <form method="post" action="/emergency-stop" onsubmit="return confirm('Остановить все воркеры? Floating IP останутся без изменений.');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn-danger btn-sm" type="submit">Аварийная остановка</button></form>
     <a href="/accounts/new" class="btn">+ Добавить аккаунт</a>
@@ -19,19 +19,19 @@
 
 <div id="account-summary" class="stat-grid" {% if not accounts %}hidden{% endif %}>
   <div class="stat-card">
-    <div id="account-count" class="num">{{ accounts | length }}</div>
+    {{ icon('account', 'stat-icon') }}<div id="account-count" class="num">{{ accounts | length }}</div>
     <div class="label">Аккаунтов</div>
   </div>
   <div class="stat-card">
-    <div id="running-account-count" class="num ok">{{ accounts | selectattr('is_running') | list | length }}</div>
+    {{ icon('start', 'stat-icon') }}<div id="running-account-count" class="num ok">{{ accounts | selectattr('is_running') | list | length }}</div>
     <div class="label">Работают</div>
   </div>
   <div class="stat-card">
-    <div id="account-attempt-count" class="num">{{ accounts | sum(attribute='total_attempts') }}</div>
+    {{ icon('history', 'stat-icon') }}<div id="account-attempt-count" class="num">{{ accounts | sum(attribute='total_attempts') }}</div>
     <div class="label">Всего попыток</div>
   </div>
   <div class="stat-card">
-    <div id="account-match-count" class="num ok">{{ accounts | sum(attribute='total_matches') }}</div>
+    {{ icon('found', 'stat-icon') }}<div id="account-match-count" class="num ok">{{ accounts | sum(attribute='total_matches') }}</div>
     <div class="label">Найдено в БС</div>
   </div>
 </div>
@@ -51,7 +51,7 @@
 
 <div class="panel panel-tight accent">
   <div class="table-wrap">
-  <table>
+  <table class="account-table">
     <thead>
       <tr>
         <th class="text-left">Аккаунт</th>
