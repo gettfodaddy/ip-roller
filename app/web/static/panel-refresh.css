@@ -7,7 +7,8 @@
   --accent-mid:#5b82ec; --accent-strong:#3555b5;
   --ok:#75dbb5; --ok-rgb:117,219,181; --ok-bg:rgba(117,219,181,.12);
   --warn:#efc477; --warn-bg:rgba(239,196,119,.12); --err:#f49ca7; --err-bg:rgba(244,156,167,.12);
-  --font-ui:"Manrope","Segoe UI",sans-serif;
+  --font-ui:"Golos Text","Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",Consolas,monospace;
 }
 .theme-light {
   --bg:#eef3fa; --bg-soft:#f5f8fd; --panel:#fff; --panel-2:#e8effa;
@@ -99,3 +100,15 @@ body > header .app-toolbar .logout-button:hover { background:var(--err-bg); filt
 .safety-strip #uncertain-count { display:inline; }
 .flash { text-align:center; }
 .callout { justify-content:center; }
+.temporarily-hidden { display:none !important; }
+.page-head-row { flex-direction:column; justify-content:center; text-align:center; }
+.page-head-row h1 { justify-content:center; }
+.section-title { justify-content:center; flex-wrap:wrap; text-align:center; gap:12px; }
+.section-title h2 { display:flex; justify-content:center; align-items:center; gap:10px; }
+.filter-row, .found-toolbar { justify-content:center; }
+main th, main td, main th.text-left, main td.text-left,
+main .account-table th, main .account-table td { text-align:center; }
+.account-name, .account-table .actions .btn-row { justify-content:center; }
+.account-table .status-detail { margin-inline:auto !important; }
+.metric-note, .callout { text-align:center; }
+.stat-card .num { font-variant-numeric:tabular-nums; }

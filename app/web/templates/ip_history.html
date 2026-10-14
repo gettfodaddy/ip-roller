@@ -2,14 +2,14 @@
 {% block title %}История IP — Roller IP{% endblock %}
 {% block content %}
 <div class="page-head-row">
-  <div><div class="kicker">Дедупликация</div><h1>История IP</h1><div class="muted">Первое и последнее появление, повторы и результат локальной проверки по CIDR.</div><div class="metric-note">Эта таблица — история проверки адресов. Защищённые, удерживаемые Floating IP смотрите во вкладке «Защищённые IP».</div></div>
+  <div><div class="kicker">Дедупликация</div><h1>{{ icon('history') }} История IP</h1><div class="muted">Первое и последнее появление, повторы и результат локальной проверки по CIDR.</div><div class="metric-note">Эта таблица — история проверки адресов. Защищённые, удерживаемые Floating IP смотрите во вкладке «Защищённые IP».</div></div>
   <a href="/found-ips" class="btn btn-secondary btn-sm">Защищённые IP</a>
 </div>
 <div class="stat-grid">
-  <div class="stat-card"><div class="num">{{ summary.registry.get('match', 0) }}</div><div class="label">Совпадения</div></div>
+  <div class="stat-card">{{ icon('found', 'stat-icon') }}<div class="num">{{ summary.registry.get('match', 0) }}</div><div class="label">Совпадения</div></div>
   <div class="stat-card"><div class="num">{{ summary.registry.get('miss', 0) }}</div><div class="label">Не совпало</div></div>
   <div class="stat-card"><div class="num {{ 'err' if summary.registry.get('error', 0) else '' }}">{{ summary.registry.get('error', 0) }}</div><div class="label">Ошибки</div></div>
-  <div class="stat-card"><div class="num">{{ summary.repeat_ips }}</div><div class="label">Повторялись</div></div>
+  <div class="stat-card">{{ icon('history', 'stat-icon') }}<div class="num">{{ summary.repeat_ips }}</div><div class="label">Повторялись</div></div>
 </div>
 <div class="panel panel-tight accent">
   <div style="padding:18px 20px;">

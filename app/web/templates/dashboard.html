@@ -9,7 +9,7 @@
   </div>
 </div>
 
-<div class="panel panel-tight safety-strip">
+<div class="panel panel-tight safety-strip temporarily-hidden" hidden>
   <div><span class="muted">Операций сегодня</span><strong class="mono" style="margin-left:8px"><span id="today-create-count">{{ safety.today_creates }}</span> / {{ daily_create_limit }}</strong></div>
   <div><span class="muted">Управляемых IP</span><strong class="mono" style="margin-left:8px"><span id="managed-ip-count">{{ safety.managed }}</span> / {{ active_ip_limit }}</strong></div>
   <div><span class="muted">Ошибок удаления</span><strong id="delete-error-count" class="mono {{ 'err' if safety.delete_errors else '' }}" style="margin-left:8px">{{ safety.delete_errors }}</strong></div>

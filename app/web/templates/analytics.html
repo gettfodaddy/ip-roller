@@ -3,7 +3,7 @@
 {% block content %}
 <div id="live-region" data-poll-interval="15000">
 <div class="page-head-row">
-  <div><div class="kicker">Наблюдаемость</div><h1>Аналитика</h1><div class="muted">Статистика из журнала операций и реестра IP. Расходы показываются только при наличии достоверных данных провайдера.</div></div>
+  <div><div class="kicker">Наблюдаемость</div><h1>{{ icon('analytics') }} Аналитика</h1><div class="muted">Статистика из журнала операций и реестра IP.</div></div>
   <form method="get" action="/analytics" class="filter-row">
     <label for="hours-filter" style="margin:0;">Период</label>
     <select id="hours-filter" name="hours" onchange="this.form.submit()">
@@ -15,7 +15,7 @@
 </div>
 
 <div class="stat-grid">
-  <div class="stat-card"><div class="num">{{ analytics.attempts }}</div><div class="label">Проверок адресов</div></div>
+  <div class="stat-card">{{ icon('history', 'stat-icon') }}<div class="num">{{ analytics.attempts }}</div><div class="label">Проверок адресов</div></div>
   <div class="stat-card"><div class="num ok">{{ analytics.totals.get('match', 0) }}</div><div class="label">Найдено совпадений</div></div>
   <div class="stat-card"><div class="num">{{ analytics.totals.get('miss', 0) }}</div><div class="label">Не совпало с CIDR</div></div>
   <div class="stat-card"><div class="num {{ 'err' if analytics.errors else '' }}">{{ analytics.errors }}</div><div class="label">Ошибки API/сети</div></div>
@@ -24,7 +24,7 @@
   <div class="stat-card"><div class="num">{{ analytics.repeat_ips }}</div><div class="label">IP с повторными появлениями</div></div>
 </div>
 
-<div class="panel">
+<div class="panel temporarily-hidden" hidden>
   <div class="section-title"><h2>Оценка стоимости удержания</h2><span class="data-chip">Не является данными биллинга</span></div>
   {% if analytics.cost_per_ip_hour_rub > 0 %}
   <div class="stat-grid" style="margin-bottom:8px;">
