@@ -12,8 +12,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from . import db
 from .config import settings
-from .notify import send_telegram_message, send_telegram_photo
-from .report_card import render_report_card_png
+from .notify import send_telegram_rich_message
 
 log = logging.getLogger("ip-roller.telegram-reports")
 
@@ -23,7 +22,7 @@ def _period_label(start: datetime, end: datetime, timezone_name: str) -> str:
         tz = ZoneInfo(timezone_name)
     except ZoneInfoNotFoundError:
         tz = timezone.utc
-    return f"{start.astimezone(tz):%d.%m %H:%M}–{end.astimezone(tz):%H:%M} ({tz.key})"
+    return f"{start.astimezone(tz):%d.%m %H:%M}–{end.astimezone(tz):%H:%M} ({getattr(tz, 'key', 'UTC')})"
 
 
 async def build_hourly_report(
@@ -35,7 +34,8 @@ async def build_hourly_report(
     timezone_name: str = "Europe/Moscow",
     manager=None,
     test: bool = False,
-) -> str:
+    rich: bool = False,
+) -> str | dict:
     """Build a report from persisted create/check events, never dashboard estimates."""
     start_s = start.astimezone(timezone.utc).isoformat(timespec="seconds")
     end_s = end.astimezone(timezone.utc).isoformat(timespec="seconds")
@@ -149,24 +149,59 @@ async def build_hourly_report(
     else:
         lines += ["", "💳 Расходы не рассчитаны: не задана ставка тарифа"]
     lines += ["", "<i>Повтор — IP, уже встречавшийся в истории. Расходы — оценка по ставке из конфигурации.</i>"]
+    if rich:
+        def table(headers, rows):
+            return {"type": "table", "is_striped": True, "is_compact": True,
+                    "cells": [[{"text": h, "is_header": True} for h in headers]] +
+                             [[{"text": str(value)} for value in row] for row in rows]}
+
+        blocks = [
+            {"type": "heading", "size": 2, "text": title},
+            {"type": "paragraph", "text": _period_label(start, end, timezone_name)},
+            {"type": "heading", "size": 3, "text": "🎯 Результаты"},
+            table(["Показатель", "Значение"], [
+                ["📦 Выделено IP", allocated], ["✅ Проверено успешно", checked],
+                ["🎯 Совпадений с CIDR", f"{counts.get('match', 0)} · {match_rate:.1f}%"],
+                ["⚪ Не совпало", counts.get('miss', 0)],
+                ["🔁 Повторных IP", f"{repeats} · {repeat_rate:.1f}%"],
+                ["✨ Новых уникальных совпадений", new_matches],
+                ["📈 Новых IP на 100 проверок", f"{efficiency:.2f}"],
+            ]),
+            {"type": "heading", "size": 3, "text": "🚦 Ошибки и аккаунты"},
+            table(["Показатель", "Значение"], [
+                ["HTTP 429", counts.get('rate_limited', 0) + counts.get('http_429', 0)],
+                ["Ошибки проверки IP", counts.get('check_error', 0)],
+                ["Другие ошибки API/сети", other_errors],
+                ["Активных аккаунтов", f"{running}/{len(accounts)}"], ["Cooldown", cooldown],
+            ]),
+        ]
+        if regions:
+            blocks += [{"type": "heading", "size": 3, "text": "🌍 По зонам"},
+                       table(["Зона", "IP", "БС", "Повторы"], [
+                           [region, v['allocated'], v['matches'], v['repeats']]
+                           for region, v in sorted(regions.items())])]
+        if cost_per_ip_hour_rub > 0:
+            blocks += [{"type": "heading", "size": 3, "text": "💳 Расходы · оценка"},
+                       table(["Показатель", "Значение"], [
+                           ["Ресурсы за период", f"{cost:.2f} ₽"],
+                           ["На совпадение", f"{cost / counts['match']:.2f} ₽" if counts.get('match') else "—"]])]
+        else:
+            blocks.append({"type": "paragraph", "text": "💳 Расходы не рассчитаны: не задана ставка тарифа"})
+        blocks.append({"type": "footer", "text": "Повтор — IP, уже встречавшийся в истории. Расходы — оценка по ставке из конфигурации."})
+        return {"blocks": blocks}
     return "\n".join(lines)
 
 
 async def send_report_for_period(start: datetime, end: datetime, *, manager=None, test: bool = False) -> bool:
-    text = await build_hourly_report(
+    card = await build_hourly_report(
         settings.db_path, start, end,
         cost_per_ip_hour_rub=settings.floating_ip_cost_per_hour_rub,
-        timezone_name=settings.telegram_report_timezone, manager=manager, test=test,
+        timezone_name=settings.telegram_report_timezone, manager=manager, test=test, rich=True,
     )
-    try:
-        image = render_report_card_png(text)
-        caption = f"{'🧪 Тестовая сводка' if test else '📊 Сводка роллинга'} · {_period_label(start, end, settings.telegram_report_timezone)}"
-        if await send_telegram_photo(settings.telegram_bot_token, settings.telegram_chat_id, image, caption):
-            return True
-        log.warning("Не удалось отправить карточку отчёта; пробую отправить форматированный текст")
-    except (ImportError, OSError, RuntimeError, ValueError) as exc:
-        log.warning("Не удалось сформировать карточку отчёта: %r; отправляю текстовую версию", exc)
-    return await send_telegram_message(settings.telegram_bot_token, settings.telegram_chat_id, text, parse_mode="HTML")
+    return await send_telegram_rich_message(
+        settings.telegram_bot_token, settings.telegram_chat_id, card,
+        panel_url=settings.telegram_panel_url,
+    )
 
 
 def previous_complete_hour(now: datetime | None = None, timezone_name: str = "Europe/Moscow") -> tuple[datetime, datetime]:

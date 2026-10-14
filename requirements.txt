@@ -10,4 +10,3 @@ passlib[bcrypt]>=1.7
 bcrypt<4.1
 aiosqlite>=0.20
 cryptography>=44.0
-Pillow>=10.0

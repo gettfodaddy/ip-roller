@@ -15,7 +15,7 @@ import httpx
 log = logging.getLogger("ip-roller.notify")
 
 TELEGRAM_API = "https://api.telegram.org/bot{token}/sendMessage"
-TELEGRAM_PHOTO_API = "https://api.telegram.org/bot{token}/sendPhoto"
+TELEGRAM_RICH_API = "https://api.telegram.org/bot{token}/sendRichMessage"
 
 
 def format_found_message(*, account_label: str, ip: str, zone: str, city: str, cidr: str) -> str:
@@ -67,25 +67,32 @@ async def send_telegram_message(
         return False
 
 
-async def send_telegram_photo(
-    bot_token: str, chat_id: str, image: bytes, caption: str = "", *, timeout: float = 20.0
+async def send_telegram_rich_message(
+    bot_token: str, chat_id: str, card: dict, *, panel_url: str = "", timeout: float = 20.0
 ) -> bool:
-    """Send a generated report card as an actual Telegram photo message."""
+    """Send a native Telegram card with sections and striped tables."""
     if not bot_token or not chat_id:
         log.warning("Telegram не настроен (пустой token/chat_id) — карточка пропущена")
         return False
-    url = TELEGRAM_PHOTO_API.format(token=bot_token)
+    url = TELEGRAM_RICH_API.format(token=bot_token)
+    payload = {"chat_id": chat_id, "rich_message": card}
+    if panel_url:
+        from urllib.parse import urlsplit
+        parsed = urlsplit(panel_url)
+        if parsed.scheme in {"http", "https"} and parsed.netloc and not parsed.username and not parsed.password and not parsed.query and not parsed.fragment:
+            payload["reply_markup"] = {"inline_keyboard": [[
+                {"text": "📊 Панель", "url": panel_url.rstrip("/") + "/"},
+                {"text": "🔎 История IP", "url": panel_url.rstrip("/") + "/ip-history"},
+            ]]}
+        else:
+            log.warning("TELEGRAM_PANEL_URL некорректен — кнопки пропущены")
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(
-                url,
-                data={"chat_id": chat_id, "caption": caption[:1024]},
-                files={"photo": ("roller-report.png", image, "image/png")},
-            )
+            response = await client.post(url, json=payload)
         if response.status_code != 200 or not response.json().get("ok", False):
-            log.warning("Telegram sendPhoto не принял карточку: %s %s", response.status_code, response.text[:300])
+            log.warning("Telegram sendRichMessage не принял карточку (HTTP %s)", response.status_code)
             return False
         return True
-    except (httpx.HTTPError, ValueError) as exc:
-        log.warning("Ошибка отправки карточки в Telegram: %r", exc)
+    except (httpx.HTTPError, ValueError):
+        log.warning("Ошибка отправки карточки в Telegram")
         return False
