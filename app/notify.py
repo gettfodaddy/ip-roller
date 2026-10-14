@@ -15,6 +15,7 @@ import httpx
 log = logging.getLogger("ip-roller.notify")
 
 TELEGRAM_API = "https://api.telegram.org/bot{token}/sendMessage"
+TELEGRAM_PHOTO_API = "https://api.telegram.org/bot{token}/sendPhoto"
 
 
 def format_found_message(*, account_label: str, ip: str, zone: str, city: str, cidr: str) -> str:
@@ -63,4 +64,28 @@ async def send_telegram_message(
         return True
     except httpx.HTTPError as exc:
         log.warning("Ошибка сети при отправке в Telegram: %r", exc)
+        return False
+
+
+async def send_telegram_photo(
+    bot_token: str, chat_id: str, image: bytes, caption: str = "", *, timeout: float = 20.0
+) -> bool:
+    """Send a generated report card as an actual Telegram photo message."""
+    if not bot_token or not chat_id:
+        log.warning("Telegram не настроен (пустой token/chat_id) — карточка пропущена")
+        return False
+    url = TELEGRAM_PHOTO_API.format(token=bot_token)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(
+                url,
+                data={"chat_id": chat_id, "caption": caption[:1024]},
+                files={"photo": ("roller-report.png", image, "image/png")},
+            )
+        if response.status_code != 200 or not response.json().get("ok", False):
+            log.warning("Telegram sendPhoto не принял карточку: %s %s", response.status_code, response.text[:300])
+            return False
+        return True
+    except (httpx.HTTPError, ValueError) as exc:
+        log.warning("Ошибка отправки карточки в Telegram: %r", exc)
         return False

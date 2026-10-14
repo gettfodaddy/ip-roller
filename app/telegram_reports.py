@@ -12,7 +12,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from . import db
 from .config import settings
-from .notify import send_telegram_message
+from .notify import send_telegram_message, send_telegram_photo
+from .report_card import render_report_card_png
 
 log = logging.getLogger("ip-roller.telegram-reports")
 
@@ -157,6 +158,14 @@ async def send_report_for_period(start: datetime, end: datetime, *, manager=None
         cost_per_ip_hour_rub=settings.floating_ip_cost_per_hour_rub,
         timezone_name=settings.telegram_report_timezone, manager=manager, test=test,
     )
+    try:
+        image = render_report_card_png(text)
+        caption = f"{'🧪 Тестовая сводка' if test else '📊 Сводка роллинга'} · {_period_label(start, end, settings.telegram_report_timezone)}"
+        if await send_telegram_photo(settings.telegram_bot_token, settings.telegram_chat_id, image, caption):
+            return True
+        log.warning("Не удалось отправить карточку отчёта; пробую отправить форматированный текст")
+    except (ImportError, OSError, RuntimeError, ValueError) as exc:
+        log.warning("Не удалось сформировать карточку отчёта: %r; отправляю текстовую версию", exc)
     return await send_telegram_message(settings.telegram_bot_token, settings.telegram_chat_id, text, parse_mode="HTML")
 
 

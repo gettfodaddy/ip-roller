@@ -8,7 +8,7 @@
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip sqlite3 curl gnupg debian-keyring debian-archive-keyring apt-transport-https
+sudo apt install -y python3 python3-venv python3-pip fonts-dejavu-core sqlite3 curl gnupg debian-keyring debian-archive-keyring apt-transport-https
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
 sudo chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg
@@ -150,7 +150,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' https://ВАШ.ДОМЕН/login
 
 ### Telegram-отчёты роллинга (опционально)
 
-Задайте `TELEGRAM_BOT_TOKEN` и `TELEGRAM_CHAT_ID` в `/opt/ip-roller/.env`. После перезапуска приложения оно будет отправлять сводку за завершившийся час через две минуты после смены часа. Часовой пояс по умолчанию — `Europe/Moscow`; его можно изменить через `TELEGRAM_REPORT_TIMEZONE`. Отчёт включает проверки, совпадения и повторы IP, 429 и другие ошибки, состояние аккаунтов, показатели по зонам и, только при заданной `FLOATING_IP_COST_PER_HOUR_RUB`, оценку стоимости.
+Задайте `TELEGRAM_BOT_TOKEN` и `TELEGRAM_CHAT_ID` в `/opt/ip-roller/.env`. После перезапуска приложения оно будет отправлять сводку за завершившийся час через две минуты после смены часа в виде PNG-карточки с тёмной подложкой, цветными секциями и таблицей по зонам. Для кириллического шрифта установите `fonts-dejavu-core` (см. команду установки выше). Часовой пояс по умолчанию — `Europe/Moscow`; его можно изменить через `TELEGRAM_REPORT_TIMEZONE`. Отчёт включает проверки, совпадения и повторы IP, 429 и другие ошибки, состояние аккаунтов, показатели по зонам и, только при заданной `FLOATING_IP_COST_PER_HOUR_RUB`, оценку стоимости. Если PNG сформировать не удастся, будет отправлена форматированная текстовая сводка.
 
 Для ручной проверки отправь в чат тестовую сводку за последний завершённый час:
 
