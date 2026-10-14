@@ -22,6 +22,7 @@ from .. import db
 from ..config import settings
 from ..manager import RollerManager
 from ..ip_checker import run_registry_checker
+from ..telegram_reports import hourly_report_loop
 from ..security import csrf_token, hash_password, is_authenticated, login, logout, require_login, verify_csrf, verify_password
 from ..whitelist import Whitelist
 from ..zones import ZoneCatalog
@@ -45,6 +46,11 @@ async def lifespan(app: FastAPI):
     app.state.manager = manager
     checker_stop = asyncio.Event()
     checker_task = asyncio.create_task(run_registry_checker(settings.db_path, whitelist, checker_stop))
+    report_stop = asyncio.Event()
+    report_task = None
+    if settings.telegram_hourly_report_enabled and settings.telegram_bot_token and settings.telegram_chat_id:
+        report_task = asyncio.create_task(hourly_report_loop(report_stop, manager=manager))
+        log.info("Почасовые Telegram-отчёты включены (%s)", settings.telegram_report_timezone)
 
     log.info("ip-roller запущен, загружено CIDR: %d, зон: %d", whitelist.cidr_count(), len(zone_catalog.all_codes()))
     if not settings.admin_password_hash:
@@ -57,6 +63,9 @@ async def lifespan(app: FastAPI):
         await manager.resume_desired_running()
         yield
     finally:
+        report_stop.set()
+        if report_task:
+            await report_task
         checker_stop.set()
         await checker_task
         await manager.shutdown()

@@ -90,7 +90,7 @@
 
 <div class="panel accent tab-panel" id="telegram">
   <h2>Telegram-уведомления</h2>
-  <p class="muted center" style="margin-bottom:20px;">Опционально — присылает сообщение в группу/чат при каждой находке IP из белого списка.</p>
+  <p class="muted center" style="margin-bottom:20px;">Telegram не обязателен. Если заданы токен и chat_id, бот сообщает о совпадениях и присылает почасовую статистику роллинга.</p>
 
   <ol class="steps">
     <li>
@@ -105,11 +105,18 @@
       <h4>Пропиши в <span class="mono">.env</span> на сервере</h4>
       <p>Открой <span class="mono">/opt/ip-roller/.env</span>, заполни:</p>
       <div class="mono-box" style="display:block; text-align:left; white-space:pre;">TELEGRAM_BOT_TOKEN=твой_токен
-TELEGRAM_CHAT_ID=твой_chat_id</div>
+TELEGRAM_CHAT_ID=твой_chat_id
+TELEGRAM_HOURLY_REPORT_ENABLED=true
+TELEGRAM_REPORT_TIMEZONE=Europe/Moscow</div>
     </li>
     <li>
       <h4>Перезапусти сервис</h4>
       <p><span class="mono-box">systemctl restart ip-roller</span> — без этого новые значения из <span class="mono">.env</span> не подхватятся.</p>
+    </li>
+    <li>
+      <h4>Проверь подробный отчёт вручную</h4>
+      <p>На сервере выполни <span class="mono-box">cd /opt/ip-roller &amp;&amp; sudo -u iproller .venv/bin/python -m app.telegram_reports --test</span>. Бот отправит тестовый отчёт за последний завершённый час. Обычный отчёт отправляется автоматически через две минуты после каждого часа. Чтобы отключить его, укажи <span class="mono">TELEGRAM_HOURLY_REPORT_ENABLED=false</span>.</p>
+      <p>Сводка содержит количество выделений/проверок, совпадения и повторы, 429 и другие ошибки, состояние аккаунтов и статистику по зонам. Стоимость показывается только при заданной подтверждённой ставке <span class="mono">FLOATING_IP_COST_PER_HOUR_RUB</span>; без неё бот явно сообщает, что оценка отключена.</p>
     </li>
   </ol>
 </div>

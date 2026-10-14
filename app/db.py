@@ -173,6 +173,12 @@ CREATE TABLE IF NOT EXISTS provider_failure_events (
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_provider_failure_time ON provider_failure_events(created_at DESC);
+CREATE TABLE IF NOT EXISTS notification_deliveries (
+    channel TEXT NOT NULL,
+    period_start TEXT NOT NULL,
+    delivered_at TEXT NOT NULL,
+    PRIMARY KEY(channel, period_start)
+);
 CREATE TABLE IF NOT EXISTS service_circuit (
     id INTEGER PRIMARY KEY CHECK(id=1),
     open_until TEXT,

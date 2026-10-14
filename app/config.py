@@ -69,6 +69,10 @@ class Settings:
     # Telegram-уведомления (опционально)
     telegram_bot_token: str = field(default_factory=lambda: _env("TELEGRAM_BOT_TOKEN"))
     telegram_chat_id: str = field(default_factory=lambda: _env("TELEGRAM_CHAT_ID"))
+    telegram_hourly_report_enabled: bool = field(
+        default_factory=lambda: _env("TELEGRAM_HOURLY_REPORT_ENABLED", "true").lower() in {"1", "true", "yes", "on"}
+    )
+    telegram_report_timezone: str = field(default_factory=lambda: _env("TELEGRAM_REPORT_TIMEZONE", "Europe/Moscow"))
 
     # Roller-параметры (безопасные дефолты по эмпирике пользователя:
     # 10 попыток create на аккаунт -> 429 -> ~8 минут cooldown, ГЛОБАЛЬНО
