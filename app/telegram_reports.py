@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import html
 import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -119,29 +120,34 @@ async def build_hourly_report(
     repeat_rate = 100 * repeats / allocated if allocated else 0
     efficiency = 100 * new_matches / checked if checked else 0
 
-    lines = ["🧪 ТЕСТОВЫЙ ОТЧЁТ РОЛЛИНГА" if test else "📊 Статистика роллинга за час",
-             f"Период: {_period_label(start, end, timezone_name)}", "",
-             f"Выделено IP / проверок: {allocated}",
-             f"Совпадений с CIDR: {counts.get('match', 0)} ({match_rate:.1f}% от успешных проверок)",
-             f"Не совпало с CIDR: {counts.get('miss', 0)}",
-             f"Ошибок проверки IP: {counts.get('check_error', 0)}",
-             f"Повторных IP: {repeats} ({repeat_rate:.1f}% от выделенных)",
-             f"Новых уникальных совпадений: {new_matches}",
-             f"Эффективность: {efficiency:.2f} новых IP на 100 успешных проверок",
-             f"Ошибок 429: {counts.get('rate_limited', 0) + counts.get('http_429', 0)}"]
+    title = "🧪 ТЕСТОВАЯ СВОДКА РОЛЛИНГА" if test else "📊 СВОДКА РОЛЛИНГА"
+    lines = [f"<b>{title}</b>", f"<code>{html.escape(_period_label(start, end, timezone_name))}</code>", "",
+             "<b>РЕЗУЛЬТАТЫ</b>",
+             f"📦 Выделено и проверено: <b>{allocated}</b>",
+             f"🎯 Совпадений с CIDR: <b>{counts.get('match', 0)}</b> · {match_rate:.1f}% проверок",
+             f"⚪ Не совпало: <b>{counts.get('miss', 0)}</b>",
+             f"🔁 Повторных IP: <b>{repeats}</b> · {repeat_rate:.1f}%",
+             f"✨ Новых уникальных совпадений: <b>{new_matches}</b>",
+             f"📈 Эффективность: <b>{efficiency:.2f}</b> новых IP на 100 проверок",
+             "", "<b>ОШИБКИ И АККАУНТЫ</b>",
+             f"🚦 HTTP 429: <b>{counts.get('rate_limited', 0) + counts.get('http_429', 0)}</b>",
+             f"🧪 Ошибки проверки IP: <b>{counts.get('check_error', 0)}</b>"]
     other_errors = sum(n for name, n in counts.items() if name not in {"match", "miss", "check_error", "rate_limited", "http_429"})
-    lines += [f"Других ошибок API/сети: {other_errors}",
-              f"Аккаунты: активно {running}/{len(accounts)}, cooldown {cooldown}"]
+    lines += [f"🌐 Другие ошибки API/сети: <b>{other_errors}</b>",
+              f"👥 Аккаунты: активно <b>{running}/{len(accounts)}</b> · cooldown <b>{cooldown}</b>"]
     if regions:
-        lines += ["", "По зонам:"]
+        lines += ["", "<b>ПО ЗОНАМ</b>"]
         for region, values in sorted(regions.items()):
-            lines.append(f"• {region}: IP {values['allocated']}, совпадений {values['matches']}, повторов {values['repeats']}")
+            lines.append(
+                f"<code>{html.escape(region)}</code>  · IP <b>{values['allocated']}</b>"
+                f"  · БС <b>{values['matches']}</b>  · повторы <b>{values['repeats']}</b>"
+            )
     if cost_per_ip_hour_rub > 0:
-        lines += ["", f"Оценка стоимости ресурсов за период: {cost:.2f} ₽",
-                  f"Стоимость одного совпадения: {cost / counts['match']:.2f} ₽" if counts.get("match") else "Стоимость совпадения: — (совпадений нет)"]
+        lines += ["", "<b>РАСХОДЫ · ОЦЕНКА</b>", f"💳 Ресурсы за период: <b>{cost:.2f} ₽</b>",
+                  f"На совпадение в этом часу: <b>{cost / counts['match']:.2f} ₽</b>" if counts.get("match") else "На совпадение: —"]
     else:
-        lines += ["", "Стоимость: не рассчитана — FLOATING_IP_COST_PER_HOUR_RUB не задана"]
-    lines += ["", "Повторы считаются по IP, которые уже встречались ранее в журнале. Стоимость — оценка по заданному тарифу."]
+        lines += ["", "💳 Расходы не рассчитаны: не задана ставка тарифа"]
+    lines += ["", "<i>Повтор — IP, уже встречавшийся в истории. Расходы — оценка по ставке из конфигурации.</i>"]
     return "\n".join(lines)
 
 
@@ -151,7 +157,7 @@ async def send_report_for_period(start: datetime, end: datetime, *, manager=None
         cost_per_ip_hour_rub=settings.floating_ip_cost_per_hour_rub,
         timezone_name=settings.telegram_report_timezone, manager=manager, test=test,
     )
-    return await send_telegram_message(settings.telegram_bot_token, settings.telegram_chat_id, text)
+    return await send_telegram_message(settings.telegram_bot_token, settings.telegram_chat_id, text, parse_mode="HTML")
 
 
 def previous_complete_hour(now: datetime | None = None, timezone_name: str = "Europe/Moscow") -> tuple[datetime, datetime]:

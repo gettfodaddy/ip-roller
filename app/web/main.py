@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -444,6 +444,23 @@ async def ip_history_page(request: Request, q: str = "", status: str = "", page:
     return render(request, "ip_history.html", active_nav="history", items=items, query=q,
                   selected_status=status, summary=summary, page=page, page_size=page_size, total=total,
                   page_count=max(1, (total + page_size - 1) // page_size))
+
+
+@app.get("/ip-history/results", response_class=HTMLResponse)
+async def ip_history_results(request: Request, q: str = "", status: str = "", page: int = 1):
+    if require_login(request) is not None:
+        return HTMLResponse("Сессия истекла. Обновите страницу и войдите снова.", status_code=401)
+    q = q[:128]
+    status = status if status in {"match", "miss", "error"} else ""
+    page_size = 100
+    total = await db.count_ip_registry(settings.db_path, search=q, status=status)
+    page_count = max(1, (total + page_size - 1) // page_size)
+    page = min(max(1, page), page_count)
+    items = await db.list_ip_registry(settings.db_path, search=q, status=status,
+                                      limit=page_size, offset=(page - 1) * page_size)
+    return render(request, "partials/ip_history_results.html", items=items, query=q,
+                  selected_status=status, page=page, page_size=page_size, total=total,
+                  page_count=page_count)
 
 
 @app.get("/analytics")

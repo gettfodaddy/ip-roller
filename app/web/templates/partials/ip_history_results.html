@@ -1,0 +1,15 @@
+<div class="filter-results-count metric-note" style="padding:0 20px 12px;">Показано {{ items | length }} из {{ total }}</div>
+<div class="table-wrap"><table><thead><tr><th>IP</th><th>Результат</th><th>Регион</th><th>Совпавший CIDR</th><th>Первое появление</th><th>Последнее</th><th>Повторы</th><th>Следующая проверка</th></tr></thead><tbody>
+  {% for item in items %}
+  <tr><td class="mono">{{ item.ip }}</td><td><span class="badge badge-{{ 'match' if item.status == 'match' else ('error' if item.status == 'error' else 'miss') }}">{{ {'match':'Совпадение','miss':'Не совпало','error':'Ошибка','pending':'Ожидает'}[item.status] }}</span></td><td>{{ item.last_region or '—' }}</td><td class="mono">{{ item.matched_cidr or '—' }}</td><td data-ts="{{ item.first_seen_at }}">{{ item.first_seen_at }}</td><td data-ts="{{ item.last_seen_at }}">{{ item.last_seen_at }}</td><td class="mono">{{ item.seen_count }}</td><td data-ts="{{ item.next_check_at }}">{{ item.next_check_at or '—' }}</td></tr>
+  {% else %}<tr><td colspan="8"><div class="empty-state">Совпадений не найдено.</div></td></tr>{% endfor %}
+</tbody></table></div>
+{% if page_count > 1 %}
+<div class="row" style="justify-content:space-between;padding:14px 20px;border-top:1px solid var(--panel-border-soft);">
+  <span class="metric-note">Страница {{ page }} из {{ page_count }}</span>
+  <div class="btn-row">
+    {% if page > 1 %}<a data-history-page href="/ip-history?q={{ query | urlencode }}&status={{ selected_status | urlencode }}&page={{ page - 1 }}" class="btn btn-secondary btn-sm">← Назад</a>{% endif %}
+    {% if page < page_count %}<a data-history-page href="/ip-history?q={{ query | urlencode }}&status={{ selected_status | urlencode }}&page={{ page + 1 }}" class="btn btn-secondary btn-sm">Дальше →</a>{% endif %}
+  </div>
+</div>
+{% endif %}

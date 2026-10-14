@@ -44,14 +44,19 @@ def format_zone_down_message(
     )
 
 
-async def send_telegram_message(bot_token: str, chat_id: str, text: str, *, timeout: float = 10.0) -> bool:
+async def send_telegram_message(
+    bot_token: str, chat_id: str, text: str, *, timeout: float = 10.0, parse_mode: str | None = None
+) -> bool:
     if not bot_token or not chat_id:
         log.warning("Telegram не настроен (пустой token/chat_id) — уведомление пропущено")
         return False
     url = TELEGRAM_API.format(token=bot_token)
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(url, json={"chat_id": chat_id, "text": text})
+            payload = {"chat_id": chat_id, "text": text}
+            if parse_mode:
+                payload["parse_mode"] = parse_mode
+            response = await client.post(url, json=payload)
         if response.status_code != 200:
             log.warning("Telegram sendMessage вернул %s: %s", response.status_code, response.text[:300])
             return False

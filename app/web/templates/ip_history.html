@@ -14,27 +14,73 @@
 <div class="panel panel-tight accent">
   <div style="padding:18px 20px;">
     <div class="filter-row">
-      <form method="get" action="/ip-history">
-        <input type="search" name="q" value="{{ query }}" placeholder="Поиск по адресу, региону или CIDR">
-        <select name="status"><option value="">Все результаты</option><option value="match" {{ 'selected' if selected_status == 'match' else '' }}>Совпадение</option><option value="miss" {{ 'selected' if selected_status == 'miss' else '' }}>Не совпало</option><option value="error" {{ 'selected' if selected_status == 'error' else '' }}>Ошибка</option></select>
+      <form method="get" action="/ip-history" id="ip-history-search">
+        <input type="search" name="q" value="{{ query }}" placeholder="Поиск по IP, региону или CIDR" aria-label="Поиск по IP, региону или CIDR" autocomplete="off">
+        <select name="status" aria-label="Фильтр по результату"><option value="">Все результаты</option><option value="match" {{ 'selected' if selected_status == 'match' else '' }}>Совпадение</option><option value="miss" {{ 'selected' if selected_status == 'miss' else '' }}>Не совпало</option><option value="error" {{ 'selected' if selected_status == 'error' else '' }}>Ошибка</option></select>
         <button class="btn-sm" type="submit">Показать</button>
       </form>
-      <span class="metric-note">Показано {{ items | length }} из {{ total }}</span>
+      <span class="metric-note" id="history-search-status" role="status" aria-live="polite">Поиск обновляется при вводе</span>
     </div>
   </div>
-  <div class="table-wrap"><table><thead><tr><th>IP</th><th>Результат</th><th>Регион</th><th>Совпавший CIDR</th><th>Первое появление</th><th>Последнее</th><th>Повторы</th><th>Следующая проверка</th></tr></thead><tbody>
-    {% for item in items %}
-    <tr><td class="mono">{{ item.ip }}</td><td><span class="badge badge-{{ 'match' if item.status == 'match' else ('error' if item.status == 'error' else 'miss') }}">{{ {'match':'Совпадение','miss':'Не совпало','error':'Ошибка','pending':'Ожидает'}[item.status] }}</span></td><td>{{ item.last_region or '—' }}</td><td class="mono">{{ item.matched_cidr or '—' }}</td><td data-ts="{{ item.first_seen_at }}">{{ item.first_seen_at }}</td><td data-ts="{{ item.last_seen_at }}">{{ item.last_seen_at }}</td><td class="mono">{{ item.seen_count }}</td><td data-ts="{{ item.next_check_at }}">{{ item.next_check_at or '—' }}</td></tr>
-    {% else %}<tr><td colspan="8"><div class="empty-state">Адреса ещё не зарегистрированы. История начнёт заполняться при следующих попытках.</div></td></tr>{% endfor %}
-  </tbody></table></div>
-  {% if page_count > 1 %}
-  <div class="row" style="justify-content:space-between;padding:14px 20px;border-top:1px solid var(--panel-border-soft);">
-    <span class="metric-note">Страница {{ page }} из {{ page_count }}</span>
-    <div class="btn-row">
-      {% if page > 1 %}<a class="btn btn-secondary btn-sm" href="/ip-history?q={{ query | urlencode }}&status={{ selected_status | urlencode }}&page={{ page - 1 }}">← Назад</a>{% endif %}
-      {% if page < page_count %}<a class="btn btn-secondary btn-sm" href="/ip-history?q={{ query | urlencode }}&status={{ selected_status | urlencode }}&page={{ page + 1 }}">Дальше →</a>{% endif %}
-    </div>
+  <div id="history-results" aria-live="polite">
+    {% include "partials/ip_history_results.html" %}
   </div>
-  {% endif %}
 </div>
+<script>
+(() => {
+  const form = document.getElementById('ip-history-search');
+  const results = document.getElementById('history-results');
+  const status = document.getElementById('history-search-status');
+  if (!form || !results) return;
+  const input = form.elements.q;
+  const select = form.elements.status;
+  let timer;
+  let activeRequest;
+
+  async function loadResults({page = 1, push = false} = {}) {
+    clearTimeout(timer);
+    if (activeRequest) activeRequest.abort();
+    const controller = new AbortController();
+    activeRequest = controller;
+    const params = new URLSearchParams({q: input.value.trim(), status: select.value, page: String(page)});
+    const url = `/ip-history/results?${params}`;
+    status.textContent = 'Ищу…';
+    form.classList.add('is-searching');
+    try {
+      const response = await fetch(url, {headers: {'X-Requested-With': 'fetch'}, signal: controller.signal});
+      if (!response.ok) throw new Error('Не удалось загрузить результаты');
+      results.innerHTML = await response.text();
+      if (typeof formatTimestamps === 'function') formatTimestamps(results);
+      status.textContent = 'Поиск обновляется при вводе';
+      const pageUrl = `/ip-history?${params}`;
+      if (push) history.pushState({}, '', pageUrl);
+      else history.replaceState({}, '', pageUrl);
+    } catch (error) {
+      if (error.name !== 'AbortError') status.textContent = error.message || 'Ошибка поиска';
+    } finally {
+      if (activeRequest === controller) form.classList.remove('is-searching');
+    }
+  }
+
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => loadResults(), 220);
+  });
+  select.addEventListener('change', () => loadResults());
+  form.addEventListener('submit', event => { event.preventDefault(); loadResults(); });
+  results.addEventListener('click', event => {
+    const link = event.target.closest('a[data-history-page]');
+    if (!link) return;
+    event.preventDefault();
+    const target = new URL(link.href);
+    loadResults({page: target.searchParams.get('page') || 1, push: true});
+  });
+  window.addEventListener('popstate', () => {
+    const params = new URLSearchParams(location.search);
+    input.value = params.get('q') || '';
+    select.value = params.get('status') || '';
+    loadResults({page: params.get('page') || 1});
+  });
+})();
+</script>
 {% endblock %}
