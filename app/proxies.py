@@ -90,20 +90,43 @@ class ProxyPool:
 
 class CheckedProxyTransport(httpx.AsyncBaseTransport):
     """Serialise account traffic across IAM, creation, cleanup and reconciliation."""
-    def __init__(self, pool, zones, status):
+    def __init__(self, pool, zones, status, stop_event=None):
         self.pool, self.zones, self.status = pool, zones, status
+        self.stop_event = stop_event
         self.lock = asyncio.Lock()
         self.transport = None
         self.url = None
         self.failures = 0
         self.closed = False
 
+    async def acquire_cancellable(self):
+        if self.stop_event is None:
+            return await self.pool.acquire(self.zones, self.status)
+        if self.stop_event.is_set():
+            raise asyncio.CancelledError
+        selection = asyncio.create_task(self.pool.acquire(self.zones, self.status))
+        stopped = asyncio.create_task(self.stop_event.wait())
+        adopted = False
+        try:
+            await asyncio.wait([selection, stopped], return_when=asyncio.FIRST_COMPLETED)
+            if self.stop_event.is_set():
+                raise asyncio.CancelledError
+            result = await selection
+            adopted = True
+            return result
+        finally:
+            selection.cancel()
+            stopped.cancel()
+            results = await asyncio.gather(selection, stopped, return_exceptions=True)
+            if not adopted and isinstance(results[0], str):
+                self.pool.release(results[0])
+
     async def handle_async_request(self, request):
         async with self.lock:
             if self.closed:
                 raise httpx.ConnectError('Proxy transport closed', request=request)
             if self.transport is None:
-                self.url = await self.pool.acquire(self.zones, self.status)
+                self.url = await self.acquire_cancellable()
                 self.transport = httpx.AsyncHTTPTransport(proxy=self.url, verify=True, retries=0)
                 self.failures = 0
                 await self.status('running', 'Прокси проверен и установлен; работа возобновлена')

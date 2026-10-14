@@ -42,7 +42,7 @@ class RollerManager:
         async def status(value, detail):
             await db.update_account_status(self.db_path, account.id, value, detail)
 
-        transport = CheckedProxyTransport(self._proxy_pool, account.selected_zones, status) if self._proxy_pool else None
+        transport = CheckedProxyTransport(self._proxy_pool, account.selected_zones, status, self._stop_events.get(account.id)) if self._proxy_pool else None
         client = SelectelNeutronClient(
             username=account.username,
             password=account.password,
@@ -85,6 +85,10 @@ class RollerManager:
                         client_factory=self._client_factory,
                         stop_event=stop_event,
                     )
+                except asyncio.CancelledError:
+                    if not stop_event.is_set():
+                        raise
+                    await db.update_account_status(self.db_path, account_id, "stopped", "остановлено пользователем")
                 except Exception:
                     log.exception("[%s] воркер упал с необработанным исключением", account.label)
                     await db.update_account_status(self.db_path, account_id, "error", "Воркер упал — см. server log")
@@ -114,6 +118,7 @@ class RollerManager:
                     await asyncio.gather(task, return_exceptions=True)
                 self._tasks.pop(account_id, None)
             self._stop_events.pop(account_id, None)
+            await db.update_account_status(self.db_path, account_id, "stopped", "остановлено пользователем")
 
     async def resume_desired_running(self) -> None:
         """Вызывается при старте приложения — поднимает воркеры для
