@@ -304,12 +304,21 @@ async def run_account_worker(
             except Exception:
                 log.exception("[%s] реконсилятор упал с необработанным исключением", account.label)
 
-    try:
-        client = await client_factory(account)
-    except Exception as exc:  # аутентификация/сеть при старте
-        log.error("[%s] не удалось создать Selectel-клиент: %r", account.label, exc)
-        await db.update_account_status(db_path, account.id, "error", f"Ошибка подключения: {exc}")
-        await db.set_account_desired_running(db_path, account.id, False)
+    while not stop_event.is_set():
+        try:
+            client = await client_factory(account)
+            break
+        except Exception as exc:  # аутентификация/сеть при старте
+            if settings.proxy_pool_enabled and isinstance(exc, httpx.RequestError):
+                await db.update_account_status(db_path, account.id, "cooldown", "Автопауза: ошибка подключения; повтор проверки прокси через 60с")
+                if not await _sleep_cancellable(60, stop_event):
+                    return
+                continue
+            log.error("[%s] не удалось создать Selectel-клиент: %r", account.label, exc)
+            await db.update_account_status(db_path, account.id, "error", f"Ошибка подключения: {exc}")
+            await db.set_account_desired_running(db_path, account.id, False)
+            return
+    else:
         return
 
     reconciler_task: asyncio.Task | None = None

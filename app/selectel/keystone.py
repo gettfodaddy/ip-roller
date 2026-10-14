@@ -112,6 +112,8 @@ async def request_token(client: httpx.AsyncClient, payloads: list[dict[str, Any]
         body = response.json()
         return token, parse_expiration(body), body
 
+    if isinstance(last_error, httpx.HTTPError):
+        raise last_error
     raise SelectelAuthError(
         "Не удалось получить IAM-токен — проверьте username/password/account_id"
     ) from last_error

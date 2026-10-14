@@ -138,6 +138,10 @@ class Settings:
     max_active_managed_ips: int = field(default_factory=lambda: _env_int("MAX_ACTIVE_MANAGED_IPS", 20))
 
 
+    proxy_pool_enabled: bool = field(default_factory=lambda: _env('PROXY_POOL_ENABLED', 'false').lower() in {'1', 'true', 'yes'})
+    proxy_pool_path: Path = field(default_factory=lambda: Path(_env('PROXY_POOL_PATH') or str(DATA_DIR / 'proxies.txt')))
+    proxy_failure_threshold: int = field(default_factory=lambda: _env_int('PROXY_FAILURE_THRESHOLD', 3))
+
 settings = Settings()
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)

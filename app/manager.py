@@ -22,6 +22,7 @@ from .roller import run_account_worker
 from .selectel.neutron import SelectelNeutronClient
 from .whitelist import Whitelist
 from .zones import ZoneCatalog
+from .proxies import ProxyPool, CheckedProxyTransport
 
 log = logging.getLogger("ip-roller.manager")
 
@@ -35,18 +36,24 @@ class RollerManager:
         self._tasks: dict[int, asyncio.Task] = {}
         self._stop_events: dict[int, asyncio.Event] = {}
         self._lifecycle_lock = asyncio.Lock()
+        self._proxy_pool = ProxyPool(settings.proxy_pool_path, threshold=settings.proxy_failure_threshold) if settings.proxy_pool_enabled else None
 
     async def _client_factory(self, account: db.AccountRow) -> SelectelNeutronClient:
+        async def status(value, detail):
+            await db.update_account_status(self.db_path, account.id, value, detail)
+
+        transport = CheckedProxyTransport(self._proxy_pool, account.selected_zones, status) if self._proxy_pool else None
         client = SelectelNeutronClient(
             username=account.username,
             password=account.password,
             account_id=account.account_id,
             project_id=account.project_id or "",
             project_name=account.project_name or "",
+            transport=transport,
         )
         try:
             await client.ensure_authenticated()  # fail fast on invalid credentials
-        except Exception:
+        except BaseException:
             await client.close()
             raise
         return client

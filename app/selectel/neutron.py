@@ -39,6 +39,7 @@ class SelectelNeutronClient:
         project_id: str = "",
         project_name: str = "",
         timeout: float = 30.0,
+        transport: httpx.AsyncBaseTransport | None = None,
     ):
         self.username = username.strip()
         self.password = password
@@ -54,6 +55,8 @@ class SelectelNeutronClient:
         self._resource_regions: dict[str, str] = {}
 
         self._client = httpx.AsyncClient(
+            transport=transport,
+            trust_env=False if transport else True,
             timeout=httpx.Timeout(timeout),
             headers={"Accept": "application/json", "Content-Type": "application/json"},
         )
